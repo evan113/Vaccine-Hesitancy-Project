@@ -1,0 +1,126 @@
+title: "Vaccine Hesitancy Project"
+author: "Evan Valdes"
+date: "2023-01-03"
+output: html_document
+---
+
+## Set working directory
+```{r}
+setwd("E:/Desktop/Vaccine Hesitancy Project/DATA")
+```
+
+## load in packages
+```{r}
+library(haven)
+library(ggplot2)
+library(dplyr)
+library(styler)
+library(tidyverse)
+```
+## load in data
+```{r}
+USADATA <- read_sav("E:/Desktop/Vaccine Hesitancy Project/DATA/AASP+G-6+-+USA_December+17,+2022_19.13.zip")
+PHDATA <- read_sav("E:/Desktop/Vaccine Hesitancy Project/DATA/AASP+G-6+PH_December+17,+2022_17.08.zip")
+```
+
+## Creating Country variable in data
+```{r}
+PHDATA$Country = 1
+USADATA$Country = 2
+```
+
+## vertical Merge data
+## You need to do a vertical merge since it is two seperate groups
+## that you are mergining - not matching participants via id
+```{r}
+USADATA <- USADATA[,-19]
+PHDATA <- PHDATA[,-59:-60]
+
+## Making column name the same across USA and PH
+colnames(USADATA)[53] = "CT"
+colnames(PHDATA)[53] = "CT"
+
+FULLDATA <- rbind(PHDATA, USADATA)
+
+```
+
+## Renaming country variable
+```{r}
+FULLDATA$Country <- as.character(FULLDATA$Country)
+
+FULLDATA$Country[FULLDATA$Country == 1] <- "Philippines"
+FULLDATA$Country[FULLDATA$Country == 2] <- "USA"
+```
+
+## calculating NA's
+```{r}
+any(is.na(FULLDATA))
+sum(is.na(FULLDATA))
+colSums(is.na(FULLDATA))
+```
+
+## Creating a subset version with only variables of interest
+## Removing variables that are specific to qualtrics data
+```{r}
+FULLDATA <- FULLDATA[, -1:-8]
+FULLDATA <- FULLDATA[, -2:-10]
+```
+
+## Reordering variables
+```{r}
+FULLDATA <- FULLDATA %>%
+  select(ResponseId, Country, Age, Gender, Edu, everything())
+```
+
+## calculating average SJ scores for participants
+```{r}
+FULLDATA$SJ <- rowMeans(FULLDATA[ , 6:9], na.rm = T)
+FULLDATA$SJ <- format(round(FULLDATA$SJ, 0), nsmall = 0)
+```
+
+## Calculating SI scale
+## Recode negatively keyed items 6-10
+## Items 1-5 are positively keyed
+## Calculate average 1-10 once 6-10 are reverse scored
+```{r}
+FULLDATA$SIT_6 <- as.numeric(FULLDATA$SIT_6)
+FULLDATA$SIT_7 <- as.numeric(FULLDATA$SIT_7)
+FULLDATA$SIT_8 <- as.numeric(FULLDATA$SIT_8)
+FULLDATA$SIT_9 <- as.numeric(FULLDATA$SIT_9)
+FULLDATA$SIT_10 <- as.numeric(FULLDATA$SIT_10)
+
+## Reverse scoring 6-10
+FULLDATA$SIT_6 <- recode(FULLDATA$SIT_6,
+  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
+  "6" = 1
+)
+FULLDATA$SIT_7 <- recode(FULLDATA$SIT_7,
+  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
+  "6" = 1
+)
+FULLDATA$SIT_8 <- recode(FULLDATA$SIT_8,
+  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
+  "6" = 1
+)
+FULLDATA$SIT_9 <- recode(FULLDATA$SIT_9,
+  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
+  "6" = 1
+)
+FULLDATA$SIT_10 <- recode(FULLDATA$SIT_10,
+  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
+  "6" = 1
+)
+
+## Calculating average of all items in scale 
+FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
+FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
+```
+
+
+________________________________________________________________________________
+## Creating an SPSS datafile of merged data for Linna
+```{r}
+library(foreign)
+
+write.foreign(FULLDATA, "PHandUS_DATA.txt", "PHandUS_DATA.sps", package = "SPSS")
+```
