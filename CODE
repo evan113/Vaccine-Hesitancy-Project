@@ -17,6 +17,7 @@ library(dplyr)
 library(styler)
 library(PerformanceAnalytics)
 library(stargazer)
+library(apaTables)
 ```
 ## load in data
 ```{r}
