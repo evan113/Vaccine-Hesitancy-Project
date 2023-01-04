@@ -15,7 +15,8 @@ library(haven)
 library(ggplot2)
 library(dplyr)
 library(styler)
-library(tidyverse)
+library(PerformanceAnalytics)
+library(stargazer)
 ```
 ## load in data
 ```{r}
@@ -116,6 +117,21 @@ FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
 FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
 ```
 
+## Correlation of SJ / SIT/ Education / Conpspiracy Theories / Political Ideology / Foreign Vaccine safety
+```{r}
+FULLDATA$SJ <- as.numeric(FULLDATA$SJ)
+FULLDATA$SIT <- as.numeric(FULLDATA$SIT)
+FULLDATA$Edu <- as.numeric(FULLDATA$Edu)
+FULLDATA$CT <- as.numeric(FULLDATA$CT)
+FULLDATA$PI_1_1 <- as.numeric(FULLDATA$PI_1_1)
+FULLDATA$DV_sj_2_1 <- as.numeric(FULLDATA$DV_sj_2_1)
+
+smallcor <- subset(FULLDATA, select = c("SJ", "SIT",
+                                           "Edu", "CT", 
+                                        "PI_1_1","DV_sj_2_1"))
+
+chart.Correlation(smallcor)
+```
 
 ________________________________________________________________________________
 ## Creating an SPSS datafile of merged data for Linna
