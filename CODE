@@ -113,9 +113,37 @@ FULLDATA$SIT_10 <- recode(FULLDATA$SIT_10,
   "6" = 1
 )
 
-## Calculating average of all items in scale 
+## Calculating average of all items in SIT scale 
 FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
 FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
+```
+
+## Sample descriptive statistics
+```{r}
+library(tableone)
+library(ggdag)
+library(table1)
+
+## RUN THIS LINE OF CODE WHEN ONLY GETTING DESCRIPTIVES (REMOVING GENDER NA'S)
+FULLDATA <- FULLDATA[!(is.na(FULLDATA$Gender)), ]
+
+FULLDATA$Gender2 <- factor(FULLDATA$Gender, levels = c(1, 2, 3, 4),
+                              labels = c("Male", "Female", "Non-Binary", "Prefer Not to Say"))
+
+FULLDATA$Age <- as.numeric(FULLDATA$Age)
+
+label(FULLDATA$Age) <- "Age"
+label(FULLDATA$Gender2) <- "Gender"
+
+## Creating descriptive table
+summary(FULLDATA$Gender2)
+mean(FULLDATA$Age, na.rm = T)
+sd(FULLDATA$Age, na.rm = T)
+
+attach(FULLDATA)
+vars_for_table <- c("Age", "Gender2")
+
+CreateTableOne(vars = vars_for_table, data = FULLDATA)
 ```
 
 ## Correlation of SJ / SIT/ Education / Conpspiracy Theories / Political Ideology / Foreign Vaccine safety
