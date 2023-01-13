@@ -209,3 +209,8 @@ ggbetweenstats(
         var.equal = FALSE
 )
 ```
+____________________________________________________________________________________________________________________________________________________________________
+## Creating an SPSS datafile of merged data 
+```{r}
+write_sav(FULLDATA, "Vaccine_Hesitancy_Data.sav")
+```
