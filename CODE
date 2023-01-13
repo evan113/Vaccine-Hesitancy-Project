@@ -6,13 +6,14 @@ output: html_document
 
 ## Set working directory
 ```{r}
-setwd("E:/Desktop/Vaccine Hesitancy Project/DATA")
+setwd("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project")
 ```
 
 ## load in packages
 ```{r}
 library(haven)
 library(ggplot2)
+library(ggstatsplot)
 library(dplyr)
 library(styler)
 library(PerformanceAnalytics)
@@ -21,28 +22,32 @@ library(apaTables)
 ```
 ## load in data
 ```{r}
-USADATA <- read_sav("E:/Desktop/Vaccine Hesitancy Project/DATA/AASP+G-6+-+USA_December+17,+2022_19.13.zip")
-PHDATA <- read_sav("E:/Desktop/Vaccine Hesitancy Project/DATA/AASP+G-6+PH_December+17,+2022_17.08.zip")
+USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
+CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
+PHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+PH_January+12,+2023_19.35.zip")
 ```
 
 ## Creating Country variable in data
 ```{r}
-PHDATA$Country = 1
-USADATA$Country = 2
+CHDATA$Country = 1
+PHDATA$Country = 2
+USADATA$Country = 3
 ```
 
 ## vertical Merge data
 ## You need to do a vertical merge since it is two seperate groups
 ## that you are mergining - not matching participants via id
 ```{r}
+CHDATA <- CHDATA[, -59:-60]
 USADATA <- USADATA[,-19]
 PHDATA <- PHDATA[,-59:-60]
 
-## Making column name the same across USA and PH
+## Making column name the same across CH / USA / PH
+colnames(CHDATA)[53] = "CT"
 colnames(USADATA)[53] = "CT"
 colnames(PHDATA)[53] = "CT"
 
-FULLDATA <- rbind(PHDATA, USADATA)
+FULLDATA <- bind_rows(USADATA, CHDATA, PHDATA)
 
 ```
 
@@ -50,8 +55,9 @@ FULLDATA <- rbind(PHDATA, USADATA)
 ```{r}
 FULLDATA$Country <- as.character(FULLDATA$Country)
 
-FULLDATA$Country[FULLDATA$Country == 1] <- "Philippines"
-FULLDATA$Country[FULLDATA$Country == 2] <- "USA"
+FULLDATA$Country[FULLDATA$Country == 1] <- "China"
+FULLDATA$Country[FULLDATA$Country == 2] <- "Philippines"
+FULLDATA$Country[FULLDATA$Country == 3] <- "USA"
 ```
 
 ## calculating NA's
@@ -80,10 +86,17 @@ FULLDATA$SJ <- rowMeans(FULLDATA[ , 6:9], na.rm = T)
 FULLDATA$SJ <- format(round(FULLDATA$SJ, 0), nsmall = 0)
 ```
 
+## Calculating average trust in science score for participants
+```{r}
+FULLDATA$TRUSTSCIENCE <- rowMeans(FULLDATA[ , 36:39], na.rm = T)
+FULLDATA$TRUSTSCIENCE <- format(round(FULLDATA$TRUSTSCIENCE, 0), nsmall = 0)
+```
+
 ## Calculating SI scale
 ## Recode negatively keyed items 6-10
 ## Items 1-5 are positively keyed
 ## Calculate average 1-10 once 6-10 are reverse scored
+## IF YOU RUN THE CAR PACKAGE AND TRY TO RUN THIS YOU WILL GET AN ERROR (PERFORM IN ORDER)
 ```{r}
 FULLDATA$SIT_6 <- as.numeric(FULLDATA$SIT_6)
 FULLDATA$SIT_7 <- as.numeric(FULLDATA$SIT_7)
@@ -93,9 +106,10 @@ FULLDATA$SIT_10 <- as.numeric(FULLDATA$SIT_10)
 
 ## Reverse scoring 6-10
 FULLDATA$SIT_6 <- recode(FULLDATA$SIT_6,
-  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
-  "6" = 1
+  '1' = 6, '2' = 5, '3' = 4, '4' = 3, '5' = 2,
+  '6' = 1
 )
+
 FULLDATA$SIT_7 <- recode(FULLDATA$SIT_7,
   "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
   "6" = 1
@@ -113,7 +127,7 @@ FULLDATA$SIT_10 <- recode(FULLDATA$SIT_10,
   "6" = 1
 )
 
-## Calculating average of all items in SIT scale 
+## Calculating average of all items in scale 
 FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
 FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
 ```
@@ -124,8 +138,6 @@ library(tableone)
 library(ggdag)
 library(table1)
 
-## RUN THIS LINE OF CODE WHEN ONLY GETTING DESCRIPTIVES (REMOVING GENDER NA'S)
-FULLDATA <- FULLDATA[!(is.na(FULLDATA$Gender)), ]
 
 FULLDATA$Gender2 <- factor(FULLDATA$Gender, levels = c(1, 2, 3, 4),
                               labels = c("Male", "Female", "Non-Binary", "Prefer Not to Say"))
@@ -146,7 +158,7 @@ vars_for_table <- c("Age", "Gender2")
 CreateTableOne(vars = vars_for_table, data = FULLDATA)
 ```
 
-## Correlation of SJ / SIT/ Education / Conpspiracy Theories / Political Ideology / Foreign Vaccine safety
+## Correlation
 ```{r}
 FULLDATA$SJ <- as.numeric(FULLDATA$SJ)
 FULLDATA$SIT <- as.numeric(FULLDATA$SIT)
@@ -154,14 +166,42 @@ FULLDATA$Edu <- as.numeric(FULLDATA$Edu)
 FULLDATA$CT <- as.numeric(FULLDATA$CT)
 FULLDATA$PI_1_1 <- as.numeric(FULLDATA$PI_1_1)
 FULLDATA$DV_sj_2_1 <- as.numeric(FULLDATA$DV_sj_2_1)
+FULLDATA$TRUSTSCIENCE <- as.numeric(FULLDATA$TRUSTSCIENCE)
+
 
 smallcor <- subset(FULLDATA, select = c("SJ", "SIT",
-                                           "Edu", "CT", 
+                                           "Edu", "CT", "TRUSTSCIENCE",
                                         "PI_1_1","DV_sj_2_1"))
 
 chart.Correlation(smallcor)
 ```
 
+## Checking for data normality and homogeneity of variances
+```{r}
+library(dlookr)
+library(car)
+
+## Data normality
+FULLDATA %>%
+        group_by() %>%
+        normality()
+
+# Homogeneity of variances
+leveneTest()
+
+
+```
+
+## ANOVA (one-way) | Fischer's, Welch's, Bayesian
+```{r}
+ggbetweenstats(
+        data = FULLDATA,
+        x = groupingvariable,
+        y = dv,
+        type = "parametric",
+        var.equal = FALSE
+)
+```
 ________________________________________________________________________________
 ## Creating an SPSS datafile of merged data for Linna
 ```{r}
