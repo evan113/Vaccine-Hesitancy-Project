@@ -1,5 +1,6 @@
+---
 title: "Vaccine Hesitancy Project"
-author: "Evan Valdes"
+author: "Evan Valdes & Junix Jerald Delos Santos"
 date: "2023-01-03"
 output: html_document
 ---
@@ -166,14 +167,20 @@ FULLDATA$Edu <- as.numeric(FULLDATA$Edu)
 FULLDATA$CT <- as.numeric(FULLDATA$CT)
 FULLDATA$PI_1_1 <- as.numeric(FULLDATA$PI_1_1)
 FULLDATA$DV_sj_2_1 <- as.numeric(FULLDATA$DV_sj_2_1)
+FULLDATA$DV_sj_1 <- as.numeric(FULLDATA$DV_sj_1)
 FULLDATA$TRUSTSCIENCE <- as.numeric(FULLDATA$TRUSTSCIENCE)
 
 
 smallcor <- subset(FULLDATA, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
-                                        "PI_1_1","DV_sj_2_1"))
+                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
 
 chart.Correlation(smallcor)
+```
+
+## Writing cor table to doc for RG
+```{r}
+apa.cor.table(smallcor, filename = "Three-Country-Correlation.doc")
 ```
 
 ## Checking for data normality and homogeneity of variances
@@ -201,11 +208,4 @@ ggbetweenstats(
         type = "parametric",
         var.equal = FALSE
 )
-```
-________________________________________________________________________________
-## Creating an SPSS datafile of merged data for Linna
-```{r}
-library(foreign)
-
-write.foreign(FULLDATA, "PHandUS_DATA.txt", "PHandUS_DATA.sps", package = "SPSS")
 ```
