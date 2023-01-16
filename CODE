@@ -1,6 +1,6 @@
 ---
 title: "Vaccine Hesitancy Project"
-author: "Evan Valdes & Junix Jerald Delos Santos"
+author: "Evan Valdes"
 date: "2023-01-03"
 output: html_document
 ---
@@ -21,7 +21,10 @@ library(PerformanceAnalytics)
 library(stargazer)
 library(apaTables)
 ```
-## load in data
+
+##______________________________________________________________________________
+## DON'T NEED TO RUN ANY OF THIS ANYMORE - SEE BELOW FOR CODE
+## load in SEPERATE COUNTRY DATA (NOT NECESSARY ANYMORE)
 ```{r}
 USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
 CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
@@ -50,22 +53,6 @@ colnames(PHDATA)[53] = "CT"
 
 FULLDATA <- bind_rows(USADATA, CHDATA, PHDATA)
 
-```
-
-## Renaming country variable
-```{r}
-FULLDATA$Country <- as.character(FULLDATA$Country)
-
-FULLDATA$Country[FULLDATA$Country == 1] <- "China"
-FULLDATA$Country[FULLDATA$Country == 2] <- "Philippines"
-FULLDATA$Country[FULLDATA$Country == 3] <- "USA"
-```
-
-## calculating NA's
-```{r}
-any(is.na(FULLDATA))
-sum(is.na(FULLDATA))
-colSums(is.na(FULLDATA))
 ```
 
 ## Creating a subset version with only variables of interest
@@ -132,6 +119,65 @@ FULLDATA$SIT_10 <- recode(FULLDATA$SIT_10,
 FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
 FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
 ```
+##______________________________________________________________________________
+
+## NOW USE THIS STARTING HERE ***
+## LOAD IN MERGED DATA
+```{r}
+FULLDATA <- read_sav("~/Desktop/Vaccine Hesitancy Project/FULLDATA.sav")
+```
+
+## Renaming country variable
+```{r}
+FULLDATA$Country <- as.character(FULLDATA$Country)
+
+FULLDATA$Country[FULLDATA$Country == 1] <- "China"
+FULLDATA$Country[FULLDATA$Country == 2] <- "Philippines"
+FULLDATA$Country[FULLDATA$Country == 3] <- "USA"
+
+## Making country a grouping variable
+FULLDATA$Country <- as.factor(FULLDATA$Country)
+```
+
+## Missing data analysis
+## calculating NA's
+## DONT RUN WHEN DOING CORRELATIONAL ANALYSIS - MICE OVERIDE FILTER FUNCTION
+```{r}
+## Removed randomization variables
+missingdata <- subset(FULLDATA)
+missingdata <- missingdata[, -43:-48]
+
+totalcells <- prod(dim(missingdata))
+missingcells <- sum(is.na(missingdata))
+percentage <- (missingcells * 100)/(totalcells)
+percentage
+
+## Identifying where data is missing
+library(mice)
+md.pattern(missingdata)
+
+## Little MCAR test
+library(misty)
+na.test(missingdata, digits = 2, p.digits = 3, as.na = NULL, check = T, output = T)
+
+any(is.na(FULLDATA))
+sum(is.na(FULLDATA))
+colSums(is.na(FULLDATA))
+
+
+## Regular full data missing analysis
+totalcells <- prod(dim(FULLDATA))
+missingcells <- sum(is.na(FULLDATA))
+percentage <- (missingcells *100)/(totalcells)
+
+percentage
+
+
+
+md.pattern(FULLDATA)
+
+```
+
 
 ## Sample descriptive statistics
 ```{r}
@@ -159,8 +205,9 @@ vars_for_table <- c("Age", "Gender2")
 CreateTableOne(vars = vars_for_table, data = FULLDATA)
 ```
 
-## Correlation
+## Correlation Tables
 ```{r}
+## FULLDATA Correlation
 FULLDATA$SJ <- as.numeric(FULLDATA$SJ)
 FULLDATA$SIT <- as.numeric(FULLDATA$SIT)
 FULLDATA$Edu <- as.numeric(FULLDATA$Edu)
@@ -171,11 +218,39 @@ FULLDATA$DV_sj_1 <- as.numeric(FULLDATA$DV_sj_1)
 FULLDATA$TRUSTSCIENCE <- as.numeric(FULLDATA$TRUSTSCIENCE)
 
 
-smallcor <- subset(FULLDATA, select = c("SJ", "SIT",
+fullcor <- subset(FULLDATA, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
                                         "PI_1_1","DV_sj_2_1", "DV_sj_1"))
 
-chart.Correlation(smallcor)
+chart.Correlation(fullcor)
+
+## Seperate country datasets for correlation
+SMALLCH <- filter(FULLDATA, Country == "China")
+
+SMALLPH <- filter(FULLDATA, Country == "Philippines")
+
+SMALLUS <- filter(FULLDATA, Country == "USA")
+
+## CHINA correlation
+chinacor <- subset(SMALLCH, select = c("SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE",
+                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+chart.Correlation(chinacor)
+
+
+## PHILIPPINES correlation
+philippinescor <- subset(SMALLPH, select = c("SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE",
+                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+chart.Correlation(philippinescor)
+
+## USA correaltion
+
+usacor <- subset(SMALLUS, select = c("SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE",
+                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+chart.Correlation(usacor)
+
 ```
 
 ## Writing cor table to doc for RG
@@ -183,7 +258,10 @@ chart.Correlation(smallcor)
 apa.cor.table(smallcor, filename = "Three-Country-Correlation.doc")
 ```
 
-## Checking for data normality and homogeneity of variances
+
+
+
+## Checking for data normality and homogeneity of variances (ANOVA ANALYSIS)
 ```{r}
 library(dlookr)
 library(car)
@@ -209,8 +287,8 @@ ggbetweenstats(
         var.equal = FALSE
 )
 ```
-____________________________________________________________________________________________________________________________________________________________________
-## Creating an SPSS datafile of merged data 
+________________________________________________________________________________
+## Creating an SPSS datafile of merged data for Linna
 ```{r}
-write_sav(FULLDATA, "Vaccine_Hesitancy_Data.sav")
+write_sav(FULLDATA, "FULLDATA.sav")
 ```
