@@ -139,6 +139,15 @@ FULLDATA$Country[FULLDATA$Country == 3] <- "USA"
 FULLDATA$Country <- as.factor(FULLDATA$Country)
 ```
 
+## Seperate country datasets 
+```{r}
+SMALLCH <- filter(FULLDATA, Country == "China")
+
+SMALLPH <- filter(FULLDATA, Country == "Philippines")
+
+SMALLUS <- filter(FULLDATA, Country == "USA")
+```
+
 ## Missing data analysis
 ## calculating NA's
 ## DONT RUN WHEN DOING CORRELATIONAL ANALYSIS - MICE OVERIDE FILTER FUNCTION
@@ -160,6 +169,25 @@ md.pattern(missingdata)
 library(misty)
 na.test(missingdata, digits = 2, p.digits = 3, as.na = NULL, check = T, output = T)
 
+## China
+totalcells <- prod(dim(SMALLCH))
+missingcells <- sum(is.na(SMALLCH))
+percentage <- (missingcells * 100)/(totalcells)
+percentage ## 62% missing 
+
+## Philippines
+totalcells <- prod(dim(SMALLPH))
+missingcells <- sum(is.na(SMALLPH))
+percentage <- (missingcells * 100)/(totalcells)
+percentage ## 27% missing
+
+## USA
+totalcells <- prod(dim(SMALLUS))
+missingcells <- sum(is.na(SMALLUS))
+percentage <- (missingcells * 100)/(totalcells)
+percentage ## 21% missing
+
+
 any(is.na(FULLDATA))
 sum(is.na(FULLDATA))
 colSums(is.na(FULLDATA))
@@ -171,7 +199,6 @@ missingcells <- sum(is.na(FULLDATA))
 percentage <- (missingcells *100)/(totalcells)
 
 percentage
-
 
 
 md.pattern(FULLDATA)
@@ -224,12 +251,6 @@ fullcor <- subset(FULLDATA, select = c("SJ", "SIT",
 
 chart.Correlation(fullcor)
 
-## Seperate country datasets for correlation
-SMALLCH <- filter(FULLDATA, Country == "China")
-
-SMALLPH <- filter(FULLDATA, Country == "Philippines")
-
-SMALLUS <- filter(FULLDATA, Country == "USA")
 
 ## CHINA correlation
 chinacor <- subset(SMALLCH, select = c("SJ", "SIT",
@@ -255,10 +276,19 @@ chart.Correlation(usacor)
 
 ## Writing cor table to doc for RG
 ```{r}
+## full data cor
 apa.cor.table(smallcor, filename = "Three-Country-Correlation.doc")
+
+## China cor
+apa.cor.table(chinacor, filename = "CHINACOR.doc")
+
+## Philippines cor
+apa.cor.table(philippinescor, filename = "PHILIPPINESCOR.doc")
+## USA cor
+apa.cor.table(usacor, filename = "USA.doc")
 ```
 
-
+## Regressions
 
 
 ## Checking for data normality and homogeneity of variances (ANOVA ANALYSIS)
