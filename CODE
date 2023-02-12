@@ -28,7 +28,13 @@ library(apaTables)
 ```{r}
 USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
 CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
+CHDATA2 <- read_sav("AASP+G-6+-+CH+-+Copy_February+7,+2023_05.39.zip")
 PHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+PH_January+12,+2023_19.35.zip")
+```
+
+## MERGE BOTH CHINA DATASETS
+```{r}
+CHDATA <- bind_rows(CHDATA, CHDATA2)
 ```
 
 ## Creating Country variable in data
@@ -80,81 +86,41 @@ FULLDATA$TRUSTSCIENCE <- rowMeans(FULLDATA[ , 36:39], na.rm = T)
 FULLDATA$TRUSTSCIENCE <- format(round(FULLDATA$TRUSTSCIENCE, 0), nsmall = 0)
 ```
 
-## Calculating SI scale
-## Recode negatively keyed items 6-10
-## Items 1-5 are positively keyed
-## Calculate average 1-10 once 6-10 are reverse scored
-## IF YOU RUN THE CAR PACKAGE AND TRY TO RUN THIS YOU WILL GET AN ERROR (PERFORM IN ORDER)
-```{r}
-FULLDATA$SIT_6 <- as.numeric(FULLDATA$SIT_6)
-FULLDATA$SIT_7 <- as.numeric(FULLDATA$SIT_7)
-FULLDATA$SIT_8 <- as.numeric(FULLDATA$SIT_8)
-FULLDATA$SIT_9 <- as.numeric(FULLDATA$SIT_9)
-FULLDATA$SIT_10 <- as.numeric(FULLDATA$SIT_10)
-
-## Reverse scoring 6-10
-FULLDATA$SIT_6 <- recode(FULLDATA$SIT_6,
-  '1' = 6, '2' = 5, '3' = 4, '4' = 3, '5' = 2,
-  '6' = 1
-)
-
-FULLDATA$SIT_7 <- recode(FULLDATA$SIT_7,
-  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
-  "6" = 1
-)
-FULLDATA$SIT_8 <- recode(FULLDATA$SIT_8,
-  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
-  "6" = 1
-)
-FULLDATA$SIT_9 <- recode(FULLDATA$SIT_9,
-  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
-  "6" = 1
-)
-FULLDATA$SIT_10 <- recode(FULLDATA$SIT_10,
-  "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2,
-  "6" = 1
-)
-
-## Calculating average of all items in scale 
-FULLDATA$SIT <- rowMeans(FULLDATA[ , 12:21], na.rm = T)
-FULLDATA$SIT <- format(round(FULLDATA$SIT, 0), nsmall = 0)
-```
-##______________________________________________________________________________
-
-## NOW USE THIS STARTING HERE ***
-## LOAD IN MERGED DATA
-```{r}
-FULLDATA <- read_sav("~/Desktop/Vaccine Hesitancy Project/FULLDATA.sav")
-```
-
-## Renaming country variable
-```{r}
-FULLDATA$Country <- as.character(FULLDATA$Country)
-
-FULLDATA$Country[FULLDATA$Country == 1] <- "China"
-FULLDATA$Country[FULLDATA$Country == 2] <- "Philippines"
-FULLDATA$Country[FULLDATA$Country == 3] <- "USA"
-
-## Making country a grouping variable
-FULLDATA$Country <- as.factor(FULLDATA$Country)
-```
-
-## Seperate country datasets 
-```{r}
-SMALLCH <- filter(FULLDATA, Country == "China")
-
-SMALLPH <- filter(FULLDATA, Country == "Philippines")
-
-SMALLUS <- filter(FULLDATA, Country == "USA")
-```
 
 ## Missing data analysis
 ## calculating NA's
 ## DONT RUN WHEN DOING CORRELATIONAL ANALYSIS - MICE OVERIDE FILTER FUNCTION
 ```{r}
-## Removed randomization variables
-missingdata <- subset(FULLDATA)
-missingdata <- missingdata[, -43:-48]
+missingdata <- subset(FULLDATA, select = c(
+        "ResponseId","Country", "Age", "Gender", "Edu", "SJ_1", "SJ_2", "SJ_3", "SJ_4",
+        "SIT_1", "SIT_2", "SIT_3", "SIT_4", "SIT_5", "SIT_6",
+        "SIT_7", "SIT_8", "SIT_9","SIT_10", "SIT_11_1", "SIT_11_2", "SJ", "SIT",
+        "T_G_1", "T_G_2", "T_G_3", "T_H_1", "T_H_2", "T_H_3", "T_S_1", "T_S_2",
+        "T_S_3", "T_S_4", "CT", "PI_1_1", "TRUSTSCIENCE"
+))
+
+missingdata$Age <- as.numeric(missingdata$Age)
+missingdata$Gender <- as.factor(missingdata$Gender)
+missingdata$Edu <- as.numeric(missingdata$Edu)
+missingdata$PI_1_1 <- as.numeric(missingdata$PI_1_1)
+missingdata$TRUSTSCIENCE <- as.numeric(missingdata$TRUSTSCIENCE)
+missingdata$CT <- as.numeric(missingdata$CT)
+
+SJ_vars = grep("SJ", names(missingdata), value = TRUE)
+missingdata[,SJ_vars] = sapply(missingdata[,SJ_vars], as.numeric)
+
+SIT_vars = grep("SIT", names(missingdata), value = TRUE)
+missingdata[,SIT_vars] = sapply(missingdata[,SIT_vars], as.numeric)
+
+TG_vars = grep("T_G", names(missingdata), value = TRUE)
+missingdata[,TG_vars] = sapply(missingdata[,TG_vars], as.numeric)
+
+TS_vars = grep("T_S", names(missingdata), value = TRUE)
+missingdata[,TS_vars] = sapply(missingdata[,TS_vars], as.numeric)
+
+library(mice)
+library(misty)
+library(tidyverse)
 
 totalcells <- prod(dim(missingdata))
 missingcells <- sum(is.na(missingdata))
@@ -162,49 +128,94 @@ percentage <- (missingcells * 100)/(totalcells)
 percentage
 
 ## Identifying where data is missing
-library(mice)
 md.pattern(missingdata)
-
 ## Little MCAR test
-library(misty)
 na.test(missingdata, digits = 2, p.digits = 3, as.na = NULL, check = T, output = T)
 
-## China
-totalcells <- prod(dim(SMALLCH))
-missingcells <- sum(is.na(SMALLCH))
-percentage <- (missingcells * 100)/(totalcells)
-percentage ## 62% missing 
 
-## Philippines
-totalcells <- prod(dim(SMALLPH))
-missingcells <- sum(is.na(SMALLPH))
-percentage <- (missingcells * 100)/(totalcells)
-percentage ## 27% missing
+## Impute data function
+imputed_data <- mice(missingdata, m=40, method = "rf", seed = 100)
+summary(imputed_data)
 
-## USA
-totalcells <- prod(dim(SMALLUS))
-missingcells <- sum(is.na(SMALLUS))
-percentage <- (missingcells * 100)/(totalcells)
-percentage ## 21% missing
+options(scipen = 999)
 
-
-any(is.na(FULLDATA))
-sum(is.na(FULLDATA))
-colSums(is.na(FULLDATA))
-
-
-## Regular full data missing analysis
-totalcells <- prod(dim(FULLDATA))
-missingcells <- sum(is.na(FULLDATA))
-percentage <- (missingcells *100)/(totalcells)
-
-percentage
-
-
-md.pattern(FULLDATA)
-
+stacked_imputed_data <- complete(imputed_data, "long", include = T)
+finished_imputed_data <- complete(imputed_data, 4)
 ```
 
+## Merging imputed with other variables not in imputation
+```{r}
+neededvars <- subset(FULLDATA, select = c(
+        "ResponseId", "DV_si_1", "DV_si_2", "DV_sj_1", "DV_sj_2_1", "G_SI_Prime__1",
+        "G_SI_Prime__2", "N_SI_Prime_1", "N_SI_Prime_2", "FL_21_DO_FL_24",
+        "FL_21_DO_FL_26", "FL_31_DO_H_SJ", "FL_31_DO_L_SJ", "FL_27_DO_G_SI",
+        "FL_27_DO_N_SI"
+))
+
+COMPLETEDDATA <- merge(finished_imputed_data, neededvars, by = "ResponseId", 
+                       all = T)
+```
+
+## Creating new datafile to save into memory
+## SPSS file
+```{r}
+write_sav(COMPLETEDDATA, "FULLDATA.sav")
+```
+
+##____________________________________________________________________________
+
+## NOW USE THIS STARTING HERE ***
+## LOAD IN multiply imputed DATA
+```{r}
+COMPLETEDDATA <- read_sav("~/Desktop/Vaccine Hesitancy Project/FULLDATA.sav")
+```
+
+## calculating SJ scores
+```{r}
+COMPLETEDDATA$SJ <- rowMeans(COMPLETEDDATA[ , 6:9], na.rm = T)
+COMPLETEDDATA$SJ <- format(round(COMPLETEDDATA$SJ, 0), nsmall = 0)
+COMPLETEDDATA$SJ <- as.numeric(COMPLETEDDATA$SJ)
+```
+
+## Calculating SIT scores
+## Already did the reverse scoring 
+```{r}
+## Recode negatively keyed items 6-10
+## Items 1-5 are positively keyed
+## Calculate average 1-10 once 6-10 are reverse scored
+COMPLETEDDATA$SIT_6 <- as.numeric(COMPLETEDDATA$SIT_6)
+COMPLETEDDATA$SIT_7 <- as.numeric(COMPLETEDDATA$SIT_7)
+COMPLETEDDATA$SIT_8 <- as.numeric(COMPLETEDDATA$SIT_8)
+COMPLETEDDATA$SIT_9 <- as.numeric(COMPLETEDDATA$SIT_9)
+COMPLETEDDATA$SIT_10 <- as.numeric(COMPLETEDDATA$SIT_10)
+
+
+
+## Calculating average of all items in scale 
+COMPLETEDDATA$SIT <- rowMeans(COMPLETEDDATA[ , 10:19], na.rm = T)
+COMPLETEDDATA$SIT <- format(round(COMPLETEDDATA$SIT, 0), nsmall = 0)
+```
+
+## Renaming country variable
+```{r}
+COMPLETEDDATA$Country <- as.character(COMPLETEDDATA$Country)
+
+COMPLETEDDATA$Country[COMPLETEDDATA$Country == 1] <- "China"
+COMPLETEDDATA$Country[COMPLETEDDATA$Country == 2] <- "Philippines"
+COMPLETEDDATA$Country[COMPLETEDDATA$Country == 3] <- "USA"
+
+## Making country a grouping variable
+COMPLETEDDATA$Country <- as.factor(COMPLETEDDATA$Country)
+```
+
+## Seperate country datasets 
+```{r}
+SMALLCH <- filter(COMPLETEDDATA, Country == "China")
+
+SMALLPH <- filter(COMPLETEDDATA, Country == "Philippines")
+
+SMALLUS <- filter(COMPLETEDDATA, Country == "USA")
+```
 
 ## Sample descriptive statistics
 ```{r}
@@ -213,39 +224,39 @@ library(ggdag)
 library(table1)
 
 
-FULLDATA$Gender2 <- factor(FULLDATA$Gender, levels = c(1, 2, 3, 4),
+COMPLETEDDATA$Gender2 <- factor(COMPLETEDDATA$Gender, levels = c(1, 2, 3, 4),
                               labels = c("Male", "Female", "Non-Binary", "Prefer Not to Say"))
 
-FULLDATA$Age <- as.numeric(FULLDATA$Age)
+COMPLETEDDATA$Age <- as.numeric(COMPLETEDDATA$Age)
 
-label(FULLDATA$Age) <- "Age"
-label(FULLDATA$Gender2) <- "Gender"
+label(COMPLETEDDATA$Age) <- "Age"
+label(COMPLETEDDATA$Gender2) <- "Gender"
 
 ## Creating descriptive table
-summary(FULLDATA$Gender2)
-mean(FULLDATA$Age, na.rm = T)
-sd(FULLDATA$Age, na.rm = T)
+summary(COMPLETEDDATA$Gender2)
+mean(COMPLETEDDATA$Age, na.rm = T)
+sd(COMPLETEDDATA$Age, na.rm = T)
 
-attach(FULLDATA)
+attach(COMPLETEDDATA)
 vars_for_table <- c("Age", "Gender2")
 
-CreateTableOne(vars = vars_for_table, data = FULLDATA)
+CreateTableOne(vars = vars_for_table, data = COMPLETEDDATA)
 ```
 
 ## Correlation Tables
-```{r}
+```{r, warning=FALSE}
 ## FULLDATA Correlation
-FULLDATA$SJ <- as.numeric(FULLDATA$SJ)
-FULLDATA$SIT <- as.numeric(FULLDATA$SIT)
-FULLDATA$Edu <- as.numeric(FULLDATA$Edu)
-FULLDATA$CT <- as.numeric(FULLDATA$CT)
-FULLDATA$PI_1_1 <- as.numeric(FULLDATA$PI_1_1)
-FULLDATA$DV_sj_2_1 <- as.numeric(FULLDATA$DV_sj_2_1)
-FULLDATA$DV_sj_1 <- as.numeric(FULLDATA$DV_sj_1)
-FULLDATA$TRUSTSCIENCE <- as.numeric(FULLDATA$TRUSTSCIENCE)
+COMPLETEDDATA$SJ <- as.numeric(COMPLETEDDATA$SJ)
+COMPLETEDDATA$SIT <- as.numeric(COMPLETEDDATA$SIT)
+COMPLETEDDATA$Edu <- as.numeric(COMPLETEDDATA$Edu)
+COMPLETEDDATA$CT <- as.numeric(COMPLETEDDATA$CT)
+COMPLETEDDATA$PI_1_1 <- as.numeric(COMPLETEDDATA$PI_1_1)
+COMPLETEDDATA$DV_sj_2_1 <- as.numeric(COMPLETEDDATA$DV_sj_2_1)
+COMPLETEDDATA$DV_sj_1 <- as.numeric(COMPLETEDDATA$DV_sj_1)
+COMPLETEDDATA$TRUSTSCIENCE <- as.numeric(COMPLETEDDATA$TRUSTSCIENCE)
 
 
-fullcor <- subset(FULLDATA, select = c("SJ", "SIT",
+fullcor <- subset(COMPLETEDDATA, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
                                         "PI_1_1","DV_sj_2_1", "DV_sj_1"))
 
@@ -253,6 +264,15 @@ chart.Correlation(fullcor)
 
 
 ## CHINA correlation
+SMALLCH$SJ <- as.numeric(SMALLCH$SJ)
+SMALLCH$SIT <- as.numeric(SMALLCH$SIT)
+SMALLCH$Edu <- as.numeric(SMALLCH$Edu)
+SMALLCH$CT <- as.numeric(SMALLCH$CT)
+SMALLCH$PI_1_1 <- as.numeric(SMALLCH$PI_1_1)
+SMALLCH$DV_sj_2_1 <- as.numeric(SMALLCH$DV_sj_2_1)
+SMALLCH$DV_sj_1 <- as.numeric(SMALLCH$DV_sj_1)
+SMALLCH$TRUSTSCIENCE <- as.numeric(SMALLCH$TRUSTSCIENCE)
+
 chinacor <- subset(SMALLCH, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
                                         "PI_1_1","DV_sj_2_1", "DV_sj_1"))
@@ -260,12 +280,29 @@ chart.Correlation(chinacor)
 
 
 ## PHILIPPINES correlation
+SMALLPH$SJ <- as.numeric(SMALLPH$SJ)
+SMALLPH$SIT <- as.numeric(SMALLPH$SIT)
+SMALLPH$Edu <- as.numeric(SMALLPH$Edu)
+SMALLPH$CT <- as.numeric(SMALLPH$CT)
+SMALLPH$PI_1_1 <- as.numeric(SMALLPH$PI_1_1)
+SMALLPH$DV_sj_2_1 <- as.numeric(SMALLPH$DV_sj_2_1)
+SMALLPH$DV_sj_1 <- as.numeric(SMALLPH$DV_sj_1)
+SMALLPH$TRUSTSCIENCE <- as.numeric(SMALLPH$TRUSTSCIENCE)
+
 philippinescor <- subset(SMALLPH, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
                                         "PI_1_1","DV_sj_2_1", "DV_sj_1"))
 chart.Correlation(philippinescor)
 
-## USA correaltion
+## USA correlation
+SMALLUS$SJ <- as.numeric(SMALLUS$SJ)
+SMALLUS$SIT <- as.numeric(SMALLUS$SIT)
+SMALLUS$Edu <- as.numeric(SMALLUS$Edu)
+SMALLUS$CT <- as.numeric(SMALLUS$CT)
+SMALLUS$PI_1_1 <- as.numeric(SMALLUS$PI_1_1)
+SMALLUS$DV_sj_2_1 <- as.numeric(SMALLUS$DV_sj_2_1)
+SMALLUS$DV_sj_1 <- as.numeric(SMALLUS$DV_sj_1)
+SMALLUS$TRUSTSCIENCE <- as.numeric(SMALLUS$TRUSTSCIENCE)
 
 usacor <- subset(SMALLUS, select = c("SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE",
@@ -277,13 +314,14 @@ chart.Correlation(usacor)
 ## Writing cor table to doc for RG
 ```{r}
 ## full data cor
-apa.cor.table(smallcor, filename = "Three-Country-Correlation.doc")
+apa.cor.table(fullcor, filename = "Three-Country-Correlation.doc")
 
 ## China cor
 apa.cor.table(chinacor, filename = "CHINACOR.doc")
 
 ## Philippines cor
 apa.cor.table(philippinescor, filename = "PHILIPPINESCOR.doc")
+
 ## USA cor
 apa.cor.table(usacor, filename = "USA.doc")
 ```
@@ -297,28 +335,22 @@ library(dlookr)
 library(car)
 
 ## Data normality
-FULLDATA %>%
+COMPLETEDDATA %>%
         group_by() %>%
         normality()
 
 # Homogeneity of variances
 leveneTest()
-
-
 ```
 
 ## ANOVA (one-way) | Fischer's, Welch's, Bayesian
 ```{r}
 ggbetweenstats(
-        data = FULLDATA,
+        data = COMPLETEDDATA,
         x = groupingvariable,
         y = dv,
         type = "parametric",
         var.equal = FALSE
 )
 ```
-________________________________________________________________________________
-## Creating an SPSS datafile of merged data for Linna
-```{r}
-write_sav(FULLDATA, "FULLDATA.sav")
-```
+##________________________________________________________________________________
