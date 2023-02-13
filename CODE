@@ -26,10 +26,10 @@ library(apaTables)
 ## DON'T NEED TO RUN ANY OF THIS ANYMORE - SEE BELOW FOR CODE
 ## load in SEPERATE COUNTRY DATA (NOT NECESSARY ANYMORE)
 ```{r}
-USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
-CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
-CHDATA2 <- read_sav("AASP+G-6+-+CH+-+Copy_February+7,+2023_05.39.zip")
-PHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/AASP+G-6+PH_January+12,+2023_19.35.zip")
+USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
+CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
+CHDATA2 <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH+-+Copy_February+12,+2023_15.51.zip")
+PHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+PH_January+12,+2023_19.35.zip")
 ```
 
 ## MERGE BOTH CHINA DATASETS
@@ -94,7 +94,7 @@ FULLDATA$TRUSTSCIENCE <- format(round(FULLDATA$TRUSTSCIENCE, 0), nsmall = 0)
 missingdata <- subset(FULLDATA, select = c(
         "ResponseId","Country", "Age", "Gender", "Edu", "SJ_1", "SJ_2", "SJ_3", "SJ_4",
         "SIT_1", "SIT_2", "SIT_3", "SIT_4", "SIT_5", "SIT_6",
-        "SIT_7", "SIT_8", "SIT_9","SIT_10", "SIT_11_1", "SIT_11_2", "SJ", "SIT",
+        "SIT_7", "SIT_8", "SIT_9","SIT_10", "SIT_11_1", "SIT_11_2",
         "T_G_1", "T_G_2", "T_G_3", "T_H_1", "T_H_2", "T_H_3", "T_S_1", "T_S_2",
         "T_S_3", "T_S_4", "CT", "PI_1_1", "TRUSTSCIENCE"
 ))
@@ -121,6 +121,8 @@ missingdata[,TS_vars] = sapply(missingdata[,TS_vars], as.numeric)
 library(mice)
 library(misty)
 library(tidyverse)
+
+colSums(is.na(missingdata))
 
 totalcells <- prod(dim(missingdata))
 missingcells <- sum(is.na(missingdata))
@@ -183,17 +185,62 @@ COMPLETEDDATA$SJ <- as.numeric(COMPLETEDDATA$SJ)
 ## Recode negatively keyed items 6-10
 ## Items 1-5 are positively keyed
 ## Calculate average 1-10 once 6-10 are reverse scored
+COMPLETEDDATA$SIT_1 <- as.numeric(COMPLETEDDATA$SIT_1)
+COMPLETEDDATA$SIT_2 <- as.numeric(COMPLETEDDATA$SIT_2)
+COMPLETEDDATA$SIT_3 <- as.numeric(COMPLETEDDATA$SIT_3)
+COMPLETEDDATA$SIT_4 <- as.numeric(COMPLETEDDATA$SIT_4)
+COMPLETEDDATA$SIT_5 <- as.numeric(COMPLETEDDATA$SIT_5)
 COMPLETEDDATA$SIT_6 <- as.numeric(COMPLETEDDATA$SIT_6)
 COMPLETEDDATA$SIT_7 <- as.numeric(COMPLETEDDATA$SIT_7)
 COMPLETEDDATA$SIT_8 <- as.numeric(COMPLETEDDATA$SIT_8)
 COMPLETEDDATA$SIT_9 <- as.numeric(COMPLETEDDATA$SIT_9)
 COMPLETEDDATA$SIT_10 <- as.numeric(COMPLETEDDATA$SIT_10)
 
-
+COMPLETEDDATA$SIT_6 <- recode(COMPLETEDDATA$SIT_6,
+                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+COMPLETEDDATA$SIT_7 <- recode(COMPLETEDDATA$SIT_7,
+                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+COMPLETEDDATA$SIT_8 <- recode(COMPLETEDDATA$SIT_8,
+                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+COMPLETEDDATA$SIT_9 <- recode(COMPLETEDDATA$SIT_9,
+                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+COMPLETEDDATA$SIT_10 <- recode(COMPLETEDDATA$SIT_10,
+                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
 
 ## Calculating average of all items in scale 
 COMPLETEDDATA$SIT <- rowMeans(COMPLETEDDATA[ , 10:19], na.rm = T)
 COMPLETEDDATA$SIT <- format(round(COMPLETEDDATA$SIT, 0), nsmall = 0)
+
+COMPLETEDDATA$SIT <- as.numeric(COMPLETEDDATA$SIT)
+```
+
+## Calculating Trust items
+```{r}
+## Trust in healthcare
+COMPLETEDDATA$TRUSTHEALTHCARE <- rowMeans(COMPLETEDDATA[ , 25:27], na.rm = T)
+COMPLETEDDATA$TRUSTHEALTHCARE <- format(round(COMPLETEDDATA$TRUSTHEALTHCARE,
+                                              0), nsmall = 0)
+COMPLETEDDATA$TRUSTHEALTHCARE <- as.numeric(COMPLETEDDATA$TRUSTHEALTHCARE)
+
+## Trust in government
+COMPLETEDDATA$TRUSTGOVERNMENT <- rowMeans(COMPLETEDDATA[ , 22:24], na.rm = T)
+COMPLETEDDATA$TRUSTGOVERNMENT <- format(round(COMPLETEDDATA$TRUSTGOVERNMENT,
+                                              0), nsmall = 0)
+COMPLETEDDATA$TRUSTGOVERNMENT <- as.numeric(
+        COMPLETEDDATA$TRUSTGOVERNMENT
+)
+
+COMPLETEDDATA$TRUSTSCIENCE <- as.numeric(COMPLETEDDATA$TRUSTSCIENCE)
+```
+## Calculating national identification 
+```{r}
+COMPLETEDDATA$NATIONAL_IDENTIFCATION <- rowMeans(COMPLETEDDATA[ , 20:21], na.rm = T)
+COMPLETEDDATA$NATIONAL_IDENTIFCATION <- format(round(COMPLETEDDATA$NATIONAL_IDENTIFCATION,
+                                                     0), nsmall = 0)
+
+COMPLETEDDATA$NATIONAL_IDENTIFCATION <- as.numeric(
+        COMPLETEDDATA$NATIONAL_IDENTIFCATION
+)
 ```
 
 ## Renaming country variable
@@ -206,6 +253,70 @@ COMPLETEDDATA$Country[COMPLETEDDATA$Country == 3] <- "USA"
 
 ## Making country a grouping variable
 COMPLETEDDATA$Country <- as.factor(COMPLETEDDATA$Country)
+```
+
+
+## Calculating cronbach Alpha for all scales
+```{r}
+## SJ scale
+library(ltm)
+cronbachalphaSJ <- subset(COMPLETEDDATA,
+                          select = c(SJ_1, SJ_2, SJ_3, SJ_4))
+
+cronbach.alpha(cronbachalphaSJ, na.rm = T)
+
+## SIT scale
+cronbachalphaSIT <- subset(COMPLETEDDATA,
+                           select = c(
+                        SIT_1, SIT_2, SIT_3, SIT_4, SIT_5, SIT_6, SIT_7, SIT_8,
+                        SIT_9, SIT_10
+                           ))
+
+cronbach.alpha(cronbachalphaSIT, na.rm = T)
+
+## Trust in science scale
+cronbachalphaSCIENCE <- subset(COMPLETEDDATA,
+                               select = c(
+                                       T_S_1, T_S_2, T_S_3, T_S_4
+                               ))
+
+cronbach.alpha(cronbachalphaSCIENCE, na.rm = T)
+
+## Trust in health care scale
+cronbachalphaHEALTH <- subset(COMPLETEDDATA,
+                              select = c(
+                                      T_H_1, T_H_2,T_H_3
+                              ))
+
+cronbach.alpha(cronbachalphaHEALTH, na.rm = T)
+
+## Trust in government scale
+cronbachalphaGOVERNMENT <- subset(COMPLETEDDATA, select = c(
+        T_G_1, T_G_2, T_G_3
+))
+
+cronbach.alpha(cronbachalphaGOVERNMENT, na.rm = T)
+
+## National identification
+cronbachalphaNATID <- subset(COMPLETEDDATA, select = c(
+        SIT_11_1, SIT_11_2
+))
+
+cronbach.alpha(cronbachalphaNATID, na.rm = T)
+```
+
+## Adding country-level moderator (Freedom)
+## Data was exported from Freedomhouse
+## Adding Freedom/Civil Liberty Scores (Larger scores indicate greater freedom)
+```{r}
+COMPLETEDDATA <- COMPLETEDDATA %>%
+  mutate(Freedom = ifelse(Country == "China", 9,
+    ifelse(Country == "Philippines", 55,
+      ifelse(Country == "USA", 83,
+        ""
+      )
+    )
+  ))
 ```
 
 ## Seperate country datasets 
