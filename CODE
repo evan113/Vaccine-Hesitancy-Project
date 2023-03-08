@@ -1,4 +1,3 @@
----
 title: "Vaccine Hesitancy Project"
 author: "Evan Valdes"
 date: "2023-01-03"
@@ -20,6 +19,7 @@ library(styler)
 library(PerformanceAnalytics)
 library(stargazer)
 library(apaTables)
+library(mediation)
 library(tidyverse)
 ```
 
@@ -234,6 +234,7 @@ COMPLETEDDATA$TRUSTGOVERNMENT <- as.numeric(
 )
 
 COMPLETEDDATA$TRUSTSCIENCE <- as.numeric(COMPLETEDDATA$TRUSTSCIENCE)
+
 ```
 ## Calculating national identification 
 ```{r}
@@ -368,11 +369,17 @@ COMPLETEDDATA$PI_1_1 <- as.numeric(COMPLETEDDATA$PI_1_1)
 COMPLETEDDATA$DV_sj_2_1 <- as.numeric(COMPLETEDDATA$DV_sj_2_1)
 COMPLETEDDATA$DV_sj_1 <- as.numeric(COMPLETEDDATA$DV_sj_1)
 COMPLETEDDATA$TRUSTSCIENCE <- as.numeric(COMPLETEDDATA$TRUSTSCIENCE)
+COMPLETEDDATA$TRUSTGOVERNMENT <- as.numeric(COMPLETEDDATA$TRUSTGOVERNMENT)
+COMPLETEDDATA$TRUSTHEALTHCARE <- as.numeric(COMPLETEDDATA$TRUSTHEALTHCARE)
+COMPLETEDDATA$Freedom <- as.numeric(COMPLETEDDATA$Freedom)
+COMPLETEDDATA$Age <- as.numeric(COMPLETEDDATA$Age)
 
 
-fullcor <- subset(COMPLETEDDATA, select = c("SJ", "SIT",
-                                           "Edu", "CT", "TRUSTSCIENCE",
-                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+
+fullcor <- subset(COMPLETEDDATA, select = c("DV_sj_1", "DV_si_2", "SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE", 
+                                       "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
+                                        "PI_1_1", "Age", "Freedom"))
 
 chart.Correlation(fullcor)
 
@@ -385,11 +392,17 @@ SMALLCH$CT <- as.numeric(SMALLCH$CT)
 SMALLCH$PI_1_1 <- as.numeric(SMALLCH$PI_1_1)
 SMALLCH$DV_sj_2_1 <- as.numeric(SMALLCH$DV_sj_2_1)
 SMALLCH$DV_sj_1 <- as.numeric(SMALLCH$DV_sj_1)
+SMALLCH$TRUSTGOVERNMENT <- as.numeric(SMALLCH$TRUSTGOVERNMENT)
+SMALLCH$TRUSTHEALTHCARE <- as.numeric(SMALLCH$TRUSTHEALTHCARE)
 SMALLCH$TRUSTSCIENCE <- as.numeric(SMALLCH$TRUSTSCIENCE)
+SMALLCH$NATIONAL_IDENTIFCATION <- as.numeric(SMALLCH$NATIONAL_IDENTIFCATION)
+SMALLCH$Freedom <- as.numeric(SMALLCH$Freedom)
+SMALLCH$Age <- as.numeric(SMALLCH$Age)
 
-chinacor <- subset(SMALLCH, select = c("SJ", "SIT",
-                                           "Edu", "CT", "TRUSTSCIENCE",
-                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+chinacor <- subset(SMALLCH, select = c("DV_sj_1", "DV_si_2", "SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE", 
+                                       "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
+                                        "PI_1_1", "Age"))
 chart.Correlation(chinacor)
 
 
@@ -401,11 +414,15 @@ SMALLPH$CT <- as.numeric(SMALLPH$CT)
 SMALLPH$PI_1_1 <- as.numeric(SMALLPH$PI_1_1)
 SMALLPH$DV_sj_2_1 <- as.numeric(SMALLPH$DV_sj_2_1)
 SMALLPH$DV_sj_1 <- as.numeric(SMALLPH$DV_sj_1)
+SMALLPH$TRUSTGOVERNMENT <- as.numeric(SMALLPH$TRUSTGOVERNMENT)
+SMALLPH$TRUSTHEALTHCARE <- as.numeric(SMALLPH$TRUSTHEALTHCARE)
 SMALLPH$TRUSTSCIENCE <- as.numeric(SMALLPH$TRUSTSCIENCE)
+SMALLPH$Age <- as.numeric(SMALLPH$Age)
 
-philippinescor <- subset(SMALLPH, select = c("SJ", "SIT",
-                                           "Edu", "CT", "TRUSTSCIENCE",
-                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+philippinescor <- subset(SMALLPH, select = c("DV_si_1", "DV_si_2", "SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE", 
+                                       "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
+                                        "PI_1_1", "Age"))
 chart.Correlation(philippinescor)
 
 ## USA correlation
@@ -416,11 +433,15 @@ SMALLUS$CT <- as.numeric(SMALLUS$CT)
 SMALLUS$PI_1_1 <- as.numeric(SMALLUS$PI_1_1)
 SMALLUS$DV_sj_2_1 <- as.numeric(SMALLUS$DV_sj_2_1)
 SMALLUS$DV_sj_1 <- as.numeric(SMALLUS$DV_sj_1)
+SMALLUS$TRUSTGOVERNMENT <- as.numeric(SMALLUS$TRUSTGOVERNMENT)
+SMALLUS$TRUSTHEALTHCARE <- as.numeric(SMALLUS$TRUSTHEALTHCARE)
 SMALLUS$TRUSTSCIENCE <- as.numeric(SMALLUS$TRUSTSCIENCE)
+SMALLUS$Age <- as.numeric(SMALLUS$Age)
 
-usacor <- subset(SMALLUS, select = c("SJ", "SIT",
-                                           "Edu", "CT", "TRUSTSCIENCE",
-                                        "PI_1_1","DV_sj_2_1", "DV_sj_1"))
+usacor <- subset(SMALLUS, select = c("DV_si_1", "DV_si_2", "SJ", "SIT",
+                                           "Edu", "CT", "TRUSTSCIENCE", 
+                                       "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
+                                        "PI_1_1", "Age"))
 chart.Correlation(usacor)
 
 ```
@@ -442,54 +463,72 @@ apa.cor.table(usacor, filename = "USA.doc")
 
 ## HYPOTHESIS TESTING
 ```{r}
-## 1A + 1C
-model <- lm(DV_si_1 ~ PI_1_1 + SJ + Country + PI_1_1:Country + 
-                    SJ:Country, data = COMPLETEDDATA)
-summary(model)
+library(lme4)
+library(sjPlot)
+library(multilevel)
 
-## 1B
-model2 <- lm(DV_sj_1 ~ TRUSTSCIENCE + TRUSTHEALTHCARE + TRUSTGOVERNMENT +
-                     Country + TRUSTSCIENCE:Country + TRUSTHEALTHCARE:Country +
-                     TRUSTGOVERNMENT:Country, data = COMPLETEDDATA)
-summary(model2)
+## Mediation model #1
 
-library(mediation)
-## 2A USA mediation
+## A path
+mediate_model = lm(SJ ~ NATIONAL_IDENTIFCATION,
+                   data = COMPLETEDDATA)
+tab_model(mediate_model)
 
-## Mediator model
-mediate_model = lm(CT ~ NATIONAL_IDENTIFCATION,
-                   data = SMALLUS)
+## B path
+b_path = lm(CT ~ SJ + NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
+tab_model(b_path)
+
+## C path
+c_path = lm(CT ~ NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
+tab_model(c_path)
+
 ## fit whole model
-full_model = lm(DV_si_1 ~ CT + NATIONAL_IDENTIFCATION, data = SMALLUS)
+full_model = lm(CT ~ SJ + NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
 
 results = mediate(mediate_model, full_model, treat = "NATIONAL_IDENTIFCATION", 
-                  mediator = "CT", boot = TRUE, sims = 500)
+                  mediator = "SJ", boot = TRUE, sims = 1000)
 summary(results)
 
-## 2B Philippines mediation
-mediate_model = lm(TRUSTSCIENCE ~ NATIONAL_IDENTIFCATION,
-                   data = SMALLPH)
-## fit whole model
-full_model = lm(DV_si_1 ~ TRUSTSCIENCE + NATIONAL_IDENTIFCATION, data = SMALLPH)
+## Sobel test for mediation
+sobel(COMPLETEDDATA$NATIONAL_IDENTIFCATION, COMPLETEDDATA$SJ,
+      COMPLETEDDATA$CT)
 
-results = mediate(mediate_model, full_model, treat = "NATIONAL_IDENTIFCATION", 
-                  mediator = "TRUSTSCIENCE", boot = TRUE, sims = 500)
+## building table of mediational models
+tab_model(mediate_model, b_path, c_path, file = "SJ_mediation.doc")
+
+##  Mediation model #2
+COMPLETEDDATA <- COMPLETEDDATA %>%
+        mutate(AVG_TRUST = (TRUSTSCIENCE + TRUSTHEALTHCARE + 
+                                    TRUSTGOVERNMENT)/3)
+
+
+## Mediation model #2
+mediate_model = lm(PI_1_1 ~ SIT, data = COMPLETEDDATA)
+tab_model(mediate_model)
+
+## b path
+b_path <- lm(CT ~ SIT + PI_1_1, data = COMPLETEDDATA)
+tab_model(b_path)
+
+## c_path
+c_path <- lm(CT ~ SIT, data = COMPLETEDDATA)
+tab_model(c_path)
+
+full_model <- lm(CT ~ PI_1_1 + SIT, data = COMPLETEDDATA)
+
+results = mediate(mediate_model, full_model, treat = "SIT",
+                  mediator = "PI_1_1", boot = T, sims = 1000)
+
 summary(results)
 
-## 2C China Mediation
-mediate_model  = lm(TRUSTGOVERNMENT ~ NATIONAL_IDENTIFCATION,
-                    data = SMALLCH)
-## fit full model
-full_model = lm(DV_si_1 ~ TRUSTGOVERNMENT + NATIONAL_IDENTIFCATION,
-                data = SMALLCH)
+## SOBEL TEST FOR MEDIATION MODEL #2
+sobel(COMPLETEDDATA$SIT, COMPLETEDDATA$PI_1_1, COMPLETEDDATA$CT)
 
-results = mediate(mediate_model, full_model, treat = "NATIONAL_IDENTIFCATION", 
-                  mediator = "TRUSTGOVERNMENT", boot = TRUE, sims = 500)
-
-summary(results)
+##Building table of mediational models
+tab_model(mediate_model, b_path, c_path, file = "SIT_mediation.doc")
 
 ## 3 - ANOVA - high vs low system dependence 
-## Creating categorical var for high vs low
+## Creating categorical var for high vs low and national vs global vaccine dev
 
 COMPLETEDDATA$FL_31_DO_L_SJ <- recode(COMPLETEDDATA$FL_31_DO_L_SJ,
                                       "1" = 2)
@@ -497,11 +536,52 @@ COMPLETEDDATA$FL_31_DO_L_SJ <- recode(COMPLETEDDATA$FL_31_DO_L_SJ,
 COMPLETEDDATA$SYSTEMDEPENDENCE[COMPLETEDDATA$FL_31_DO_H_SJ == "1"] <- "1" ## High
 COMPLETEDDATA$SYSTEMDEPENDENCE[COMPLETEDDATA$FL_31_DO_L_SJ == "2"] <- "0" ## Low
 
-## T-test to see the differences in high vs low
-tidyverse::t_data <- COMPLETEDDATA %>%
+COMPLETEDDATA$SYSTEMDEPENDENCE <- as.factor(COMPLETEDDATA$SYSTEMDEPENDENCE)
+
+COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_N_SI == "1"] <- "1" ## National
+COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_G_SI == "1"] <- "0" ## Global
+
+COMPLETEDDATA$VACCINEDEVELOPMENT <- as.factor(COMPLETEDDATA$VACCINEDEVELOPMENT)
+
+## T-test to see if there is a statistical difference between high vs low
+t_data <- COMPLETEDDATA %>%
         select(SJ, SYSTEMDEPENDENCE) %>%
-        filter(SYSTEMDEPENDENCE %in% c("High", "Low")) %>%
         drop_na(SYSTEMDEPENDENCE)
+
+t.test(SJ~SYSTEMDEPENDENCE, data = t_data)
+
+## T-test to see if there is a statistical difference between national vs global group
+t_data2 <- COMPLETEDDATA %>%
+        select(SIT, VACCINEDEVELOPMENT) %>%
+        drop_na(VACCINEDEVELOPMENT)
+
+t.test(SIT~VACCINEDEVELOPMENT, data = t_data2)
+
+## EQUIVALENCE TESTING SINCE BOTH T-TESTS ARE NULL
+library(TOSTER)
+
+TOST.data1 <- t_data
+
+dataTOSTtwo(
+        data = TOST.data1,
+        deps = SJ,
+        group = SYSTEMDEPENDENCE,
+        desc = T,
+        plots = T
+) 
+## We can conclude based upon this equivalence test that
+## the Dependent variable SJ is about the same in both groups
+
+
+TOST.data2 <- t_data2
+
+dataTOSTtwo(
+        data = TOST.data2,
+        deps = SIT,
+        group = VACCINEDEVELOPMENT,
+        desc = T,
+        plots = T
+)
 
 library(psych)
 library(reshape2)
@@ -510,7 +590,6 @@ library(rstatix) ## factorial anova
 #  ANOVA ANALYSIS
 anovadata <- na.omit(COMPLETEDDATA[, c("ResponseId","Country", "SYSTEMDEPENDENCE", "SJ", 
                                        "DV_si_1", "DV_sj_1", "DV_sj_2_1")])
-COMPLETEDDATA$SYSTEMDEPENDENCE <- as.factor(COMPLETEDDATA$SYSTEMDEPENDENCE)
 
 ## Descriptives
 summarySE(anovadata, groupvars = c("SYSTEMDEPENDENCE", "Country"),
@@ -546,11 +625,6 @@ anova_test(anovadata[anovadata$Country=="Philippines",], DV_sj_2_1~SYSTEMDEPENDE
            wid = ResponseId, type = 3, effect.size = "pes")
 
 ## 4 - ANOVA - Identity
-COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_N_SI == "1"] <- "1" ## National
-COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_G_SI == "1"] <- "0" ## Global
-
-COMPLETEDDATA$VACCINEDEVELOPMENT <- as.factor(COMPLETEDDATA$VACCINEDEVELOPMENT)
-
 anovadata2 <- na.omit(COMPLETEDDATA[, c("ResponseId", "Country", "VACCINEDEVELOPMENT",
                                         "DV_si_1", "DV_si_2")])
 
@@ -584,17 +658,3 @@ anova_test(anovadata2[anovadata2$Country=="China",], DV_si_2~VACCINEDEVELOPMENT,
 anova_test(anovadata2[anovadata2$Country=="Philippines",], DV_si_2~VACCINEDEVELOPMENT,
            wid = ResponseId, type = 3, effect.size = "pes")
 ```
-
-
-
-## ANOVA (one-way) | Fischer's, Welch's, Bayesian
-```{r}
-ggbetweenstats(
-        data = COMPLETEDDATA,
-        x = groupingvariable,
-        y = dv,
-        type = "parametric",
-        var.equal = FALSE
-)
-```
-##________________________________________________________________________________
