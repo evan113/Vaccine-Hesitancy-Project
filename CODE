@@ -1,3 +1,4 @@
+---
 title: "Vaccine Hesitancy Project"
 author: "Evan Valdes"
 date: "2023-01-03"
@@ -373,6 +374,7 @@ COMPLETEDDATA$TRUSTGOVERNMENT <- as.numeric(COMPLETEDDATA$TRUSTGOVERNMENT)
 COMPLETEDDATA$TRUSTHEALTHCARE <- as.numeric(COMPLETEDDATA$TRUSTHEALTHCARE)
 COMPLETEDDATA$Freedom <- as.numeric(COMPLETEDDATA$Freedom)
 COMPLETEDDATA$Age <- as.numeric(COMPLETEDDATA$Age)
+COMPLETEDDATA$NATIONAL_IDENTIFCATION <- as.numeric(COMPLETEDDATA$NATIONAL_IDENTIFCATION)
 
 
 
@@ -466,9 +468,73 @@ apa.cor.table(usacor, filename = "USA.doc")
 library(lme4)
 library(sjPlot)
 library(multilevel)
+library(DescTools)
+library(manipulate)
+library(car)
 
+## Logistic regressions for vaccine adherence vs hesitancy 
+
+## Vaccine adherence Logistic regression 
+COMPLETEDDATA$DV_sj_1 <- as.factor(COMPLETEDDATA$DV_sj_1)
+COMPLETEDDATA$DV_sj_1 <- recode(COMPLETEDDATA$DV_sj_1,
+                                "1" = 1, "2" = 0)
+
+## Vaccine hesitancy of national vaccine
+COMPLETEDDATA$DV_si_1 <- as.factor(COMPLETEDDATA$DV_si_1)
+COMPLETEDDATA$DV_si_1 <- recode(COMPLETEDDATA$DV_si_1,
+                                "1" = 1, "2" = 0)
+
+## Vaccine hesitancy of international vaccine
+COMPLETEDDATA$DV_si_2 <- as.factor(COMPLETEDDATA$DV_si_2)
+COMPLETEDDATA$DV_si_2 <- recode(COMPLETEDDATA$DV_si_2,
+                                "1" = 1, "2" = 0)
+
+
+## National vaccine adherence/hesitancy
+model1 <- glm(DV_si_1 ~ SJ + SIT + PI_1_1 + Age + Gender + Country, family = binomial, 
+              data = COMPLETEDDATA)
+summary(model1)
+confint.default(model1)
+tab_model(model1)
+Anova(model1, type = "II", test.statistic = "Wald")
+PseudoR2(model1, which=c("McFadden", "McFaddenAdj",
+                         "Nagelkerke", "CoxSnell"))
+
+model2 <- glm(DV_sj_1 ~ SJ + SIT + Age + PI_1_1 + Gender + Country, family = binomial, 
+              data = COMPLETEDDATA)
+summary(model2)
+confint.default(model2)
+tab_model(model2)
+Anova(model2, type = "II", test.statistic = "Wald")
+PseudoR2(model2, which=c("McFadden", "McFaddenAdj",
+                         "Nagelkerke", "CoxSnell"))
+
+## International vaccine adherence
+
+model3 <- glm(DV_si_2 ~ SJ + SIT + PI_1_1 + Age + Gender + Country, family = binomial, 
+             data = COMPLETEDDATA)
+summary(model3)
+confint.default(model3)
+tab_model(model3)
+Anova(model3, type = "II", test.statistic = "Wald")
+PseudoR2(model3, which=c("McFadden", "McFaddenAdj",
+                         "Nagelkerke", "CoxSnell"))
+
+## Perceived vaccine safety (1 - 100 slider scale)
+model4 <- lm(DV_sj_2_1 ~ SJ + SIT + CT + Age + Gender + Country,
+             data = COMPLETEDDATA)
+
+summary(model4)
+tab_model(model4, file = "perceivedvaccinesafety.doc")
+anova(model4)
+
+
+```
+
+
+## Mediation analyses
+```{r}
 ## Mediation model #1
-
 ## A path
 mediate_model = lm(SJ ~ NATIONAL_IDENTIFCATION,
                    data = COMPLETEDDATA)
@@ -486,20 +552,16 @@ tab_model(c_path)
 full_model = lm(CT ~ SJ + NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
 
 results = mediate(mediate_model, full_model, treat = "NATIONAL_IDENTIFCATION", 
-                  mediator = "SJ", boot = TRUE, sims = 1000)
+                  mediator = "SJ", boot = F, sims = 1000)
 summary(results)
 
-## Sobel test for mediation
+## Sobel test for mediation model #1
 sobel(COMPLETEDDATA$NATIONAL_IDENTIFCATION, COMPLETEDDATA$SJ,
       COMPLETEDDATA$CT)
 
-## building table of mediational models
+## building table of mediation models
 tab_model(mediate_model, b_path, c_path, file = "SJ_mediation.doc")
 
-##  Mediation model #2
-COMPLETEDDATA <- COMPLETEDDATA %>%
-        mutate(AVG_TRUST = (TRUSTSCIENCE + TRUSTHEALTHCARE + 
-                                    TRUSTGOVERNMENT)/3)
 
 
 ## Mediation model #2
@@ -517,144 +579,29 @@ tab_model(c_path)
 full_model <- lm(CT ~ PI_1_1 + SIT, data = COMPLETEDDATA)
 
 results = mediate(mediate_model, full_model, treat = "SIT",
-                  mediator = "PI_1_1", boot = T, sims = 1000)
+                  mediator = "PI_1_1", sims = 1000)
 
 summary(results)
 
 ## SOBEL TEST FOR MEDIATION MODEL #2
 sobel(COMPLETEDDATA$SIT, COMPLETEDDATA$PI_1_1, COMPLETEDDATA$CT)
 
-##Building table of mediational models
+##Building table of mediation models
 tab_model(mediate_model, b_path, c_path, file = "SIT_mediation.doc")
 
-## 3 - ANOVA - high vs low system dependence 
-## Creating categorical var for high vs low and national vs global vaccine dev
-
-COMPLETEDDATA$FL_31_DO_L_SJ <- recode(COMPLETEDDATA$FL_31_DO_L_SJ,
-                                      "1" = 2)
-
-COMPLETEDDATA$SYSTEMDEPENDENCE[COMPLETEDDATA$FL_31_DO_H_SJ == "1"] <- "1" ## High
-COMPLETEDDATA$SYSTEMDEPENDENCE[COMPLETEDDATA$FL_31_DO_L_SJ == "2"] <- "0" ## Low
-
-COMPLETEDDATA$SYSTEMDEPENDENCE <- as.factor(COMPLETEDDATA$SYSTEMDEPENDENCE)
-
-COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_N_SI == "1"] <- "1" ## National
-COMPLETEDDATA$VACCINEDEVELOPMENT[COMPLETEDDATA$FL_27_DO_G_SI == "1"] <- "0" ## Global
-
-COMPLETEDDATA$VACCINEDEVELOPMENT <- as.factor(COMPLETEDDATA$VACCINEDEVELOPMENT)
-
-## T-test to see if there is a statistical difference between high vs low
-t_data <- COMPLETEDDATA %>%
-        select(SJ, SYSTEMDEPENDENCE) %>%
-        drop_na(SYSTEMDEPENDENCE)
-
-t.test(SJ~SYSTEMDEPENDENCE, data = t_data)
-
-## T-test to see if there is a statistical difference between national vs global group
-t_data2 <- COMPLETEDDATA %>%
-        select(SIT, VACCINEDEVELOPMENT) %>%
-        drop_na(VACCINEDEVELOPMENT)
-
-t.test(SIT~VACCINEDEVELOPMENT, data = t_data2)
-
-## EQUIVALENCE TESTING SINCE BOTH T-TESTS ARE NULL
-library(TOSTER)
-
-TOST.data1 <- t_data
-
-dataTOSTtwo(
-        data = TOST.data1,
-        deps = SJ,
-        group = SYSTEMDEPENDENCE,
-        desc = T,
-        plots = T
-) 
-## We can conclude based upon this equivalence test that
-## the Dependent variable SJ is about the same in both groups
+```
 
 
-TOST.data2 <- t_data2
+##________________________________________________________________________________
 
-dataTOSTtwo(
-        data = TOST.data2,
-        deps = SIT,
-        group = VACCINEDEVELOPMENT,
-        desc = T,
-        plots = T
-)
+## Data subset for OSF
+```{r}
+OSF_data <- subset(COMPLETEDDATA, select = c("Country", "SJ", "SIT", "PI_1_1",
+                                             "CT", "NATIONAL_IDENTIFCATION",
+                                             "DV_sj_1", "DV_si_1", "DV_si_2",
+                                             "DV_sj_2_1", "Age", "Gender",
+                                             "Edu", "TRUSTGOVERNMENT", "TRUSTSCIENCE",
+                                             "TRUSTHEALTHCARE", "Freedom"))
 
-library(psych)
-library(reshape2)
-library(Rmisc)
-library(rstatix) ## factorial anova
-#  ANOVA ANALYSIS
-anovadata <- na.omit(COMPLETEDDATA[, c("ResponseId","Country", "SYSTEMDEPENDENCE", "SJ", 
-                                       "DV_si_1", "DV_sj_1", "DV_sj_2_1")])
-
-## Descriptives
-summarySE(anovadata, groupvars = c("SYSTEMDEPENDENCE", "Country"),
-          measurevar = "DV_si_1")
-
-## ANOVA TESTS
-anova_test(anovadata, DV_sj_1~SYSTEMDEPENDENCE*Country, wid = ResponseId, type = 3,
-           effect.size = "pes")
-anova_test(anovadata, DV_sj_2_1~SYSTEMDEPENDENCE*Country, wid = ResponseId,
-           type = 3, effect.size = "pes")
-
-## Tukey post-hoc tests
-model1 <- lm(DV_sj_1~SYSTEMDEPENDENCE*Country, data = anovadata)
-TukeyHSD(aov(model1), "Country", ordered = F)
-
-model2 <- lm(DV_sj_2_1~SYSTEMDEPENDENCE*Country, data = anovadata)
-TukeyHSD(aov(model2), "Country", ordered = F)
-
-## Simple main effect
-## Take the vaccine
-anova_test(anovadata[anovadata$Country=="USA",], DV_sj_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata[anovadata$Country=="China",], DV_sj_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata[anovadata$Country=="Philippines",], DV_sj_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-## Vaccine safety
-anova_test(anovadata[anovadata$Country=="USA",], DV_sj_2_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata[anovadata$Country=="China",], DV_sj_2_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata[anovadata$Country=="Philippines",], DV_sj_2_1~SYSTEMDEPENDENCE, 
-           wid = ResponseId, type = 3, effect.size = "pes")
-
-## 4 - ANOVA - Identity
-anovadata2 <- na.omit(COMPLETEDDATA[, c("ResponseId", "Country", "VACCINEDEVELOPMENT",
-                                        "DV_si_1", "DV_si_2")])
-
-## ANOVA TESTS
-anova_test(anovadata2, DV_si_1~VACCINEDEVELOPMENT*Country, wid = ResponseId, type = 3,
-           effect.size = "pes")
-
-anova_test(anovadata2, DV_si_2~VACCINEDEVELOPMENT*Country, wid = ResponseId, type = 3,
-           effect.size = "pes")
-
-## Tukey post-hoc tests
-model3 <- lm(DV_si_1~VACCINEDEVELOPMENT*Country, data = anovadata2)
-TukeyHSD(aov(model3), "Country", ordered = F)
-
-model4 <- lm(DV_si_2~VACCINEDEVELOPMENT*Country, data = anovadata2)
-TukeyHSD(aov(model4), "Country", ordered = F)
-
-## Simple main effects
-## National vaccine development 
-anova_test(anovadata2[anovadata2$Country=="USA",], DV_si_1~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata2[anovadata2$Country=="China",], DV_si_1~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata2[anovadata2$Country=="Philippines",], DV_si_1~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
-## International vaccine development
-anova_test(anovadata2[anovadata2$Country=="USA",], DV_si_2~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata2[anovadata2$Country=="China",], DV_si_2~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
-anova_test(anovadata2[anovadata2$Country=="Philippines",], DV_si_2~VACCINEDEVELOPMENT,
-           wid = ResponseId, type = 3, effect.size = "pes")
+write_sav(OSF_data, "COVID_19_DATA.sav")
 ```
