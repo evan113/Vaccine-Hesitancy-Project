@@ -465,12 +465,6 @@ apa.cor.table(usacor, filename = "USA.doc")
 
 ## HYPOTHESIS TESTING
 ```{r}
-library(lme4)
-library(sjPlot)
-library(multilevel)
-library(DescTools)
-library(manipulate)
-library(car)
 
 ## Logistic regressions for vaccine adherence vs hesitancy 
 
@@ -479,19 +473,17 @@ COMPLETEDDATA$DV_sj_1 <- as.factor(COMPLETEDDATA$DV_sj_1)
 COMPLETEDDATA$DV_sj_1 <- recode(COMPLETEDDATA$DV_sj_1,
                                 "1" = 1, "2" = 0)
 
-## Vaccine hesitancy of national vaccine
-COMPLETEDDATA$DV_si_1 <- as.factor(COMPLETEDDATA$DV_si_1)
-COMPLETEDDATA$DV_si_1 <- recode(COMPLETEDDATA$DV_si_1,
-                                "1" = 1, "2" = 0)
 
-## Vaccine hesitancy of international vaccine
-COMPLETEDDATA$DV_si_2 <- as.factor(COMPLETEDDATA$DV_si_2)
-COMPLETEDDATA$DV_si_2 <- recode(COMPLETEDDATA$DV_si_2,
-                                "1" = 1, "2" = 0)
-
+## Load packages after recoding for log regression or you get an error
+library(lme4)
+library(sjPlot)
+library(multilevel)
+library(DescTools)
+library(manipulate)
+library(car)
 
 ## National vaccine adherence/hesitancy
-model1 <- glm(DV_si_1 ~ SJ + SIT + PI_1_1 + Age + Gender + Country, family = binomial, 
+model1 <- glm(DV_sj_1 ~ SIT + TRUSTGOVERNMENT + Age + Gender + Country, family = binomial,
               data = COMPLETEDDATA)
 summary(model1)
 confint.default(model1)
@@ -500,33 +492,16 @@ Anova(model1, type = "II", test.statistic = "Wald")
 PseudoR2(model1, which=c("McFadden", "McFaddenAdj",
                          "Nagelkerke", "CoxSnell"))
 
-model2 <- glm(DV_sj_1 ~ SJ + SIT + Age + PI_1_1 + Gender + Country, family = binomial, 
-              data = COMPLETEDDATA)
-summary(model2)
-confint.default(model2)
-tab_model(model2)
-Anova(model2, type = "II", test.statistic = "Wald")
-PseudoR2(model2, which=c("McFadden", "McFaddenAdj",
-                         "Nagelkerke", "CoxSnell"))
 
-## International vaccine adherence
-
-model3 <- glm(DV_si_2 ~ SJ + SIT + PI_1_1 + Age + Gender + Country, family = binomial, 
-             data = COMPLETEDDATA)
-summary(model3)
-confint.default(model3)
-tab_model(model3)
-Anova(model3, type = "II", test.statistic = "Wald")
-PseudoR2(model3, which=c("McFadden", "McFaddenAdj",
-                         "Nagelkerke", "CoxSnell"))
 
 ## Perceived vaccine safety (1 - 100 slider scale)
-model4 <- lm(DV_sj_2_1 ~ SJ + SIT + CT + Age + Gender + Country,
+model2 <- lm(DV_sj_2_1 ~  PI_1_1  + TRUSTGOVERNMENT + TRUSTHEALTHCARE + TRUSTSCIENCE +
+                       Age + Gender + Country,
              data = COMPLETEDDATA)
 
-summary(model4)
-tab_model(model4, file = "perceivedvaccinesafety.doc")
-anova(model4)
+summary(model2)
+tab_model(model2)
+anova(model2)
 
 
 ```
@@ -536,20 +511,22 @@ anova(model4)
 ```{r}
 ## Mediation model #1
 ## A path
-mediate_model = lm(SJ ~ NATIONAL_IDENTIFCATION,
+mediate_model = lm(SJ ~ NATIONAL_IDENTIFCATION + Gender + Age,
                    data = COMPLETEDDATA)
 tab_model(mediate_model)
+summary(mediate_model)
 
 ## B path
-b_path = lm(CT ~ SJ + NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
+b_path = lm(CT ~ SJ + NATIONAL_IDENTIFCATION + Gender + Age, data = COMPLETEDDATA)
+summary(b_path)
 tab_model(b_path)
 
 ## C path
-c_path = lm(CT ~ NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
+c_path = lm(CT ~ NATIONAL_IDENTIFCATION + Gender + Age, data = COMPLETEDDATA)
 tab_model(c_path)
 
 ## fit whole model
-full_model = lm(CT ~ SJ + NATIONAL_IDENTIFCATION, data = COMPLETEDDATA)
+full_model = lm(CT ~ SJ + NATIONAL_IDENTIFCATION + Gender + Age, data = COMPLETEDDATA)
 
 results = mediate(mediate_model, full_model, treat = "NATIONAL_IDENTIFCATION", 
                   mediator = "SJ", boot = F, sims = 1000)
@@ -563,20 +540,22 @@ sobel(COMPLETEDDATA$NATIONAL_IDENTIFCATION, COMPLETEDDATA$SJ,
 tab_model(mediate_model, b_path, c_path, file = "SJ_mediation.doc")
 
 
-
 ## Mediation model #2
-mediate_model = lm(PI_1_1 ~ SIT, data = COMPLETEDDATA)
+mediate_model = lm(PI_1_1 ~ SIT + Age + Gender, data = COMPLETEDDATA)
+
+summary(mediate_model)
 tab_model(mediate_model)
 
 ## b path
-b_path <- lm(CT ~ SIT + PI_1_1, data = COMPLETEDDATA)
+b_path <- lm(CT ~ SIT + PI_1_1 + Age + Gender, data = COMPLETEDDATA)
+summary(b_path)
 tab_model(b_path)
 
 ## c_path
-c_path <- lm(CT ~ SIT, data = COMPLETEDDATA)
+c_path <- lm(CT ~ SIT + Age + Gender, data = COMPLETEDDATA)
 tab_model(c_path)
 
-full_model <- lm(CT ~ PI_1_1 + SIT, data = COMPLETEDDATA)
+full_model <- lm(CT ~ PI_1_1 + SIT + Age + Gender, data = COMPLETEDDATA)
 
 results = mediate(mediate_model, full_model, treat = "SIT",
                   mediator = "PI_1_1", sims = 1000)
@@ -589,19 +568,14 @@ sobel(COMPLETEDDATA$SIT, COMPLETEDDATA$PI_1_1, COMPLETEDDATA$CT)
 ##Building table of mediation models
 tab_model(mediate_model, b_path, c_path, file = "SIT_mediation.doc")
 
-```
+## Binary Logistic mediation
+a_path <- lm(TRUSTGOVERNMENT ~ SIT + Age + Gender, data = COMPLETEDDATA)
+summary(a_path)
 
+full_model <- glm(DV_sj_1 ~ TRUSTGOVERNMENT + SIT + Age + Gender, data = COMPLETEDDATA)
+summary(full_model)
 
-##________________________________________________________________________________
-
-## Data subset for OSF
-```{r}
-OSF_data <- subset(COMPLETEDDATA, select = c("Country", "SJ", "SIT", "PI_1_1",
-                                             "CT", "NATIONAL_IDENTIFCATION",
-                                             "DV_sj_1", "DV_si_1", "DV_si_2",
-                                             "DV_sj_2_1", "Age", "Gender",
-                                             "Edu", "TRUSTGOVERNMENT", "TRUSTSCIENCE",
-                                             "TRUSTHEALTHCARE", "Freedom"))
-
-write_sav(OSF_data, "COVID_19_DATA.sav")
+results = mediate(a_path, full_model, treat = "SIT", 
+                  mediator = "TRUSTGOVERNMENT", boot = F, sims = 1000)
+summary(results)
 ```
