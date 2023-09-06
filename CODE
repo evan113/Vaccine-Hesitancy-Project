@@ -28,10 +28,12 @@ library(tidyverse)
 ## DON'T NEED TO RUN ANY OF THIS ANYMORE - SEE BELOW FOR CODE
 ## load in SEPERATE COUNTRY DATA (NOT NECESSARY ANYMORE)
 ```{r}
-USADATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
-CHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
-CHDATA2 <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH+-+Copy_February+12,+2023_15.51.zip")
-PHDATA <- read_sav("/Users/Evanvaldes1/Desktop/Vaccine Hesitancy Project/COUNTRY SPECIFIC RAW DATA/AASP+G-6+PH_January+12,+2023_19.35.zip")
+USADATA <- read_sav("COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+USA_January+12,+2023_21.24.zip")
+CHDATA <- read_sav("COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH_January+12,+2023_19.33.zip")
+CHDATA2 <- read_sav("COUNTRY SPECIFIC RAW DATA/AASP+G-6+-+CH+-+Copy_February+12,+2023_15.51.zip")
+PHDATA <- read_sav("COUNTRY SPECIFIC RAW DATA/AASP+G-6+PH_January+12,+2023_19.35.zip")
+
+
 ```
 
 ## MERGE BOTH CHINA DATASETS
@@ -70,24 +72,22 @@ FULLDATA <- FULLDATA[, -1:-8]
 FULLDATA <- FULLDATA[, -2:-10]
 ```
 
-## Reordering variables
-```{r}
-FULLDATA <- FULLDATA %>%
-  select(ResponseId, Country, Age, Gender, Edu, everything())
-```
-
 ## calculating average SJ scores for participants
 ```{r}
-FULLDATA$SJ <- rowMeans(FULLDATA[ , 6:9], na.rm = T)
+FULLDATA$SJ <- rowMeans(FULLDATA[ , 2:5], na.rm = T)
 FULLDATA$SJ <- format(round(FULLDATA$SJ, 0), nsmall = 0)
 ```
 
 ## Calculating average trust in science score for participants
 ```{r}
-FULLDATA$TRUSTSCIENCE <- rowMeans(FULLDATA[ , 36:39], na.rm = T)
+FULLDATA$TRUSTSCIENCE <- rowMeans(FULLDATA[ , 32:35], na.rm = T)
 FULLDATA$TRUSTSCIENCE <- format(round(FULLDATA$TRUSTSCIENCE, 0), nsmall = 0)
 ```
 
+## Writing missing data for osf
+```{r}
+write_sav(missingdata, "rawdata.sav")
+```
 
 ## Missing data analysis
 ## calculating NA's
@@ -146,7 +146,7 @@ summary(imputed_data)
 options(scipen = 999)
 
 stacked_imputed_data <- complete(imputed_data, "long", include = T)
-finished_imputed_data <- complete(imputed_data, 4)
+COMPLETEDDATA <- complete(imputed_data, 4)
 ```
 
 ## Merging imputed with other variables not in imputation
@@ -201,15 +201,15 @@ COMPLETEDDATA$SIT_9 <- as.numeric(COMPLETEDDATA$SIT_9)
 COMPLETEDDATA$SIT_10 <- as.numeric(COMPLETEDDATA$SIT_10)
 
 COMPLETEDDATA$SIT_6 <- recode(COMPLETEDDATA$SIT_6,
-                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+                              "1" = 7, "2" = 6, "3" = 5, "4" = 4, "5" = 3, "6" = 2, "7" = 1)
 COMPLETEDDATA$SIT_7 <- recode(COMPLETEDDATA$SIT_7,
-                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+                              "1" = 7, "2" = 6, "3" = 5, "4" = 4, "5" = 3, "6" = 2, "7" = 1)
 COMPLETEDDATA$SIT_8 <- recode(COMPLETEDDATA$SIT_8,
-                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+                              "1" = 7, "2" = 6, "3" = 5, "4" = 4, "5" = 3, "6" = 2, "7" = 1)
 COMPLETEDDATA$SIT_9 <- recode(COMPLETEDDATA$SIT_9,
-                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+                             "1" = 7, "2" = 6, "3" = 5, "4" = 4, "5" = 3, "6" = 2, "7" = 1)
 COMPLETEDDATA$SIT_10 <- recode(COMPLETEDDATA$SIT_10,
-                              "1" = 6, "2" = 5, "3" = 4, "4" = 3, "5" = 2, "6" = 1)
+                              "1" = 7, "2" = 6, "3" = 5, "4" = 4, "5" = 3, "6" = 2, "7" = 1)
 
 ## Calculating average of all items in scale 
 COMPLETEDDATA$SIT <- rowMeans(COMPLETEDDATA[ , 12:21], na.rm = T)
@@ -237,6 +237,7 @@ COMPLETEDDATA$TRUSTGOVERNMENT <- as.numeric(
 COMPLETEDDATA$TRUSTSCIENCE <- as.numeric(COMPLETEDDATA$TRUSTSCIENCE)
 
 ```
+
 ## Calculating national identification 
 ```{r}
 COMPLETEDDATA$NATIONAL_IDENTIFCATION <- rowMeans(COMPLETEDDATA[ , 22:23], na.rm = T)
@@ -258,8 +259,11 @@ COMPLETEDDATA$Country[COMPLETEDDATA$Country == 3] <- "USA"
 
 ## Making country a grouping variable
 COMPLETEDDATA$Country <- as.factor(COMPLETEDDATA$Country)
-```
 
+COMPLETEDDATA %>%
+        group_by(Country) %>%
+        summarise(abundance = n())
+```
 
 ## Calculating cronbach Alpha for all scales
 ```{r}
@@ -310,6 +314,7 @@ cronbachalphaNATID <- subset(COMPLETEDDATA, select = c(
 cronbach.alpha(cronbachalphaNATID, na.rm = T)
 ```
 
+
 ## Adding country-level moderator (Freedom)
 ## Data was exported from Freedomhouse
 ## Adding Freedom/Civil Liberty Scores (Larger scores indicate greater freedom)
@@ -345,18 +350,80 @@ COMPLETEDDATA$Gender2 <- factor(COMPLETEDDATA$Gender, levels = c(1, 2, 3, 4),
 
 COMPLETEDDATA$Age <- as.numeric(COMPLETEDDATA$Age)
 
-label(COMPLETEDDATA$Age) <- "Age"
-label(COMPLETEDDATA$Gender2) <- "Gender"
+## Demographics for Age and Gender per country
 
-## Creating descriptive table
-summary(COMPLETEDDATA$Gender2)
-mean(COMPLETEDDATA$Age, na.rm = T)
-sd(COMPLETEDDATA$Age, na.rm = T)
+COMPLETEDDATA %>%
+        group_by(Country) %>%
+        summarise(mean = mean(Age, na.rm = T),
+                  sd = sd(Age, na.rm = T),
+                  miss = mean(is.na(Age)))
 
-attach(COMPLETEDDATA)
-vars_for_table <- c("Age", "Gender2")
+COMPLETEDDATA %>%
+        group_by(Country, Gender2) %>%
+        summarise(abundance = n())
 
-CreateTableOne(vars = vars_for_table, data = COMPLETEDDATA)
+```
+
+## Invariance Testing
+```{r}
+library(lavaan)
+## Simple CFA of SJ loading onto its 4 variables Wave 1
+
+SJSESCFA <- 'SYSJ =~ SJ_1 + SJ_2 + SJ_3 + SJ_4
+GI =~ SIT_1 + SIT_2 + SIT_3 + SIT_4 + SIT_5 + SIT_6 + SIT_7 + SIT_8 + SIT_9 + SIT_10
+NI =~ SIT_11_1 + SIT_11_2
+CI =~ CT'
+
+modindices(fit1, minimum.value = 10, sort. = T)
+
+## Better model according to factor loadings
+## Allow residual correlation between SIT_1 and SIT_3 to be freely estimated
+## Allowing the error covariance between SJ_1 and SJ_2
+## Allowing the loading between SJ and SIT_2 since theres a high MI between SJ and SIT_2, allowing their loading to be freely estimated
+## Allowing the error covariance between GI indicators
+
+SJSESCFA_modified <- '
+  SYSJ =~ SJ_1 + SJ_2 + SJ_3 + SJ_4 + SIT_2
+  GI =~ SIT_1 + SIT_2 + SIT_3 + SIT_4 + SIT_5 + SIT_6 + SIT_7 + SIT_8 + SIT_9 + SIT_10
+  NI =~ SIT_11_1 + SIT_11_2
+  CI =~ CT
+  SIT_1 ~~ SIT_3
+  SIT_1 ~~ SIT_2
+  SJ_1 ~~ SJ_2'
+
+# configural invariance (does the model seem to fit the data reasonably well in both countries?)
+fit1 <- cfa(SJSESCFA, data = COMPLETEDDATA, estimator = "DWLS", group = "Country",
+            check.gradient = F)
+
+summary(fit1, standardized = TRUE, rsquare = TRUE, fit.measures = TRUE)
+
+
+fit1 <- cfa(SJSESCFA_modified, data = COMPLETEDDATA, estimator = "DWLS", group = "Country",
+            check.gradient = F)
+
+summary(fit1, standardized = TRUE, rsquare = TRUE, fit.measures = TRUE)
+
+# weak invariance/metric invariance (are the relationships between the latent variable SJ and the items about the same in the three countries? This is probably the main thing that matters for us)
+
+
+fit2 <- cfa(SJSESCFA_modified, data = COMPLETEDDATA, estimator = "DWLS", group = "Country",
+ group.equal = "loadings")
+ 
+summary(fit2, standardized = TRUE, rsquare = TRUE, fit.measures = TRUE)
+
+# strong invariance (are the intercepts the same in both countries? This would need to hold to compare mean differences across countries, probably less important for us)
+
+fit3 <- cfa(SJSESCFA_modified, data = COMPLETEDDATA, estimator = "DWLS", group = "Country",
+               group.equal = c("intercepts", "loadings"))
+
+summary(fit3, standardized = TRUE, rsquare = TRUE, fit.measures = TRUE)
+
+ 
+
+# model comparison tests (comparison to fit1 to fit2 is the main thing that establishes weak invariance).
+
+lavTestLRT(fit1, fit2, fit3, test = "D2", pool.robust = T)
+
 ```
 
 ## Correlation Tables
@@ -401,7 +468,7 @@ SMALLCH$NATIONAL_IDENTIFCATION <- as.numeric(SMALLCH$NATIONAL_IDENTIFCATION)
 SMALLCH$Freedom <- as.numeric(SMALLCH$Freedom)
 SMALLCH$Age <- as.numeric(SMALLCH$Age)
 
-chinacor <- subset(SMALLCH, select = c("DV_sj_1", "DV_si_2", "SJ", "SIT",
+chinacor <- subset(SMALLCH, select = c("DV_sj_1", "NATIONAL_IDENTIFCATION", "SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE", 
                                        "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
                                         "PI_1_1", "Age"))
@@ -421,7 +488,7 @@ SMALLPH$TRUSTHEALTHCARE <- as.numeric(SMALLPH$TRUSTHEALTHCARE)
 SMALLPH$TRUSTSCIENCE <- as.numeric(SMALLPH$TRUSTSCIENCE)
 SMALLPH$Age <- as.numeric(SMALLPH$Age)
 
-philippinescor <- subset(SMALLPH, select = c("DV_si_1", "DV_si_2", "SJ", "SIT",
+philippinescor <- subset(SMALLPH, select = c("DV_si_1", "NATIONAL_IDENTIFCATION", "SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE", 
                                        "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
                                         "PI_1_1", "Age"))
@@ -440,11 +507,38 @@ SMALLUS$TRUSTHEALTHCARE <- as.numeric(SMALLUS$TRUSTHEALTHCARE)
 SMALLUS$TRUSTSCIENCE <- as.numeric(SMALLUS$TRUSTSCIENCE)
 SMALLUS$Age <- as.numeric(SMALLUS$Age)
 
-usacor <- subset(SMALLUS, select = c("DV_si_1", "DV_si_2", "SJ", "SIT",
+usacor <- subset(SMALLUS, select = c("DV_si_1", "NATIONAL_IDENTIFCATION", "SJ", "SIT",
                                            "Edu", "CT", "TRUSTSCIENCE", 
                                        "TRUSTHEALTHCARE", "TRUSTGOVERNMENT",
                                         "PI_1_1", "Age"))
 chart.Correlation(usacor)
+
+
+library(corrr)
+library(psych)
+
+selected_cols <- subset(COMPLETEDDATA, 
+                        select = c("Country","NATIONAL_IDENTIFCATION","DV_sj_1", 
+                                   "SJ", "SIT", "Edu", "CT", "TRUSTSCIENCE", 
+                                   "TRUSTHEALTHCARE", "TRUSTGOVERNMENT", "PI_1_1", 
+                                   "Age"))
+
+SMALLCH <- filter(selected_cols, Country == "China")
+
+SMALLPH <- filter(selected_cols, Country == "Philippines")
+
+SMALLUS <- filter(selected_cols, Country == "USA")
+                        
+
+selected_cols <- subset(SMALLUS, 
+                        select = c("NATIONAL_IDENTIFCATION","DV_sj_1", 
+                                   "SJ", "SIT", "Edu", "CT", "TRUSTSCIENCE", 
+                                   "TRUSTHEALTHCARE", "TRUSTGOVERNMENT", "PI_1_1", 
+                                   "Age"))
+
+chart.Correlation(selected_cols)
+
+correlation_matrix
 
 ```
 
@@ -469,9 +563,11 @@ apa.cor.table(usacor, filename = "USA.doc")
 ## Logistic regressions for vaccine adherence vs hesitancy 
 
 ## Vaccine adherence Logistic regression 
-COMPLETEDDATA$DV_sj_1 <- as.factor(COMPLETEDDATA$DV_sj_1)
+## 0 = vaccine hesitancy 1 = not vaccine hesitant
 COMPLETEDDATA$DV_sj_1 <- recode(COMPLETEDDATA$DV_sj_1,
-                                "1" = 1, "2" = 0)
+                                "1" = 0, "2" = 1)
+COMPLETEDDATA$DV_sj_1 <- as.factor(COMPLETEDDATA$DV_sj_1)
+
 
 
 ## Load packages after recoding for log regression or you get an error
@@ -483,7 +579,9 @@ library(manipulate)
 library(car)
 
 ## National vaccine adherence/hesitancy
-model1 <- glm(DV_sj_1 ~ SIT + TRUSTGOVERNMENT + Age + Gender + Country, family = binomial,
+model1 <- glm(DV_sj_1 ~ SIT + TRUSTGOVERNMENT + TRUSTHEALTHCARE + TRUSTSCIENCE +
+                      NATIONAL_IDENTIFCATION + Age + Gender + Country, 
+              family = binomial,
               data = COMPLETEDDATA)
 summary(model1)
 confint.default(model1)
@@ -578,4 +676,408 @@ summary(full_model)
 results = mediate(a_path, full_model, treat = "SIT", 
                   mediator = "TRUSTGOVERNMENT", boot = F, sims = 1000)
 summary(results)
+```
+
+
+##________________________________________________________________________________
+
+## Data subset for OSF
+```{r}
+OSF_data <- subset(COMPLETEDDATA, select = c("Country", "SJ", "SIT", "PI_1_1",
+                                             "CT", "NATIONAL_IDENTIFCATION",
+                                             "DV_sj_1", "DV_si_1", "DV_si_2",
+                                             "DV_sj_2_1", "Age", "Gender",
+                                             "Edu", "TRUSTGOVERNMENT", "TRUSTSCIENCE",
+                                             "TRUSTHEALTHCARE", "Freedom"))
+
+write_sav(OSF_data, "COVID_19_DATA.sav")
+```
+
+## _____________________________________________________________________________
+## two-wave 6 country dataset of 6138 participants (CCK data)
+```{r}
+CCK_DATA <- read_sav("LONG_CCKFINAL_NOV_2022_ONE USED IN MMS copy.zip")
+```
+
+## Attaching country names 
+```{r}
+library(lme4)
+library(sjPlot)
+library(flexplot)
+
+CCK_DATA$Group <- as.character(CCK_DATA$Group)
+
+CCK_DATA$Group[CCK_DATA$Group == 1] <- "China"
+CCK_DATA$Group[CCK_DATA$Group == 2] <- "Hong Kong"
+CCK_DATA$Group[CCK_DATA$Group == 3] <- "Malaysia"
+CCK_DATA$Group[CCK_DATA$Group == 4] <- "Singapore"
+CCK_DATA$Group[CCK_DATA$Group == 5] <- "Taiwan"
+CCK_DATA$Group[CCK_DATA$Group == 6] <- "USA"
+
+CCK_DATA$Group <- as.factor(CCK_DATA$Group)
+```
+
+## Creating a subset of data for analysis
+```{r}
+CCK_Final <- subset(CCK_DATA, 
+                    select = c("ID", "Group", "COS1", "COS2",
+                        "COS3", "COS4", "COS5", "COS6", "COS7", "COS8", "COS9",
+                        "COS10", "COS11", "COS12", "COS13", "COS14", "COS15", "COSNew1",
+                        "COSNew2", "COSNew3", "GOS1", "GOS2", "GOS3", "GOS4", "GOS5",
+                        "GOS6", "GOS7", "GOS8", "GOS9", "GOS10", "GOS11", "GOS12",
+                        "GOS13", "GOS14", "GOS15", "GOS16", "GOS17", "GOS18", "GOS19",
+                        "GOS20", "COVID_threat","COVID_protect", "COVID_act1",
+                        "COVID_act2", "COVID_act3", "COVID_act4", "COVID_act5",
+                        "COVID_efficient", "CT1", "CT2", "CT3", "Liberalism", "SJ1",
+                        "SJ2", "SJ3", "SJ4", "Gender", "Age", "AgeGroup", "Status", "Education",
+                        "Income", "Cov1W2", "Cov2W2", "Cov3W2", "Cov4W2", "Cov5W2",
+                        "Cov6W2", "Cov11W2","Cov12W2", "Cov13W2", "Cov14W2", 
+                        "Cov15W2", "Cov16W2","Cov17W2", "CovControlW2", 
+                        "GCProfileW1", "GP_W1", "CO_W1", "RCD_W1", "GOP_W1", 
+                        "GON_W1", "IWAH1_2", "IWAH2_2", "IWAH3_2", "IWAH4_2", 
+                        "IWAH5_2", "IWAH6_2", "IWAH7_2", "IWAH8_2", 
+                        "GIdentity_W1", "GConcern_W1", "SJ_W1", "CT_W1"))
+```
+
+## Creating national identity indicator
+```{r}
+CCK_Final$NATIONAL_IDENTIFICATION <- rowMeans(CCK_Final[ , 85:92], na.rm = T)
+CCK_Final$NATIONAL_IDENTIFICATION <- format(round(CCK_Final$NATIONAL_IDENTIFICATION,
+                                                     0), nsmall = 0)
+
+CCK_Final$NATIONAL_IDENTIFICATION <- as.numeric(CCK_Final$NATIONAL_IDENTIFICATION)
+        
+```
+
+
+## Multiple imputation of missing values
+```{r}
+missingdata <- CCK_Final %>%
+  mutate_all(as.numeric)
+
+missingdata <- subset(missingdata, 
+                      select = c("ID", "Group", "COS1", "COS2",
+                        "COS3", "COS4", "COS5", "COS6", "COS7", "COS8", "COS9",
+                        "COS10", "COS11", "COS12", "COS13", "COS14", "COS15", "COSNew1",
+                        "COSNew2", "COSNew3", "GOS1", "GOS2", "GOS3", "GOS4", "GOS5",
+                        "GOS6", "GOS7", "GOS8", "GOS9", "GOS10", "GOS11", "GOS12",
+                        "GOS13", "GOS14", "GOS15", "GOS16", "GOS17", "GOS18", "GOS19",
+                        "GOS20", "SJ1","SJ2", "SJ3", "SJ4", "COVID_threat","COVID_protect", 
+                        "COVID_act1","COVID_act2", "COVID_act3", "COVID_act4", "COVID_act5",
+                        "COVID_efficient","Liberalism","Gender", "Age", "AgeGroup",
+                        "IWAH1_2", "IWAH2_2", "IWAH3_2", "IWAH4_2", "IWAH5_2", 
+                        "IWAH6_2", "IWAH7_2", "IWAH8_2","NATIONAL_IDENTIFICATION", 
+                        "Cov1W2", "Cov2W2", "Cov3W2", "Cov4W2", "Cov5W2",
+                        "Cov6W2", "Cov11W2","Cov12W2", "Cov13W2", "Cov14W2", 
+                        "Cov15W2", "Cov16W2","Cov17W2", "CovControlW2", 
+                        "GCProfileW1", "GP_W1", "CO_W1", "RCD_W1", "GOP_W1", 
+                        "GON_W1", "GIdentity_W1", "GConcern_W1", "SJ_W1", "CT_W1"))
+
+## exploring colinearity within dataset before imputation
+cor_matrix <- cor(missingdata)
+
+# Visualize the correlation matrix using a correlation plot
+library(corrplot)
+corrplot(cor_matrix, method = "color")
+
+# Alternatively, you can create a correlation matrix heatmap
+library(ggplot2)
+library(reshape2)
+
+melted_cor <- melt(cor_matrix)
+ggplot(data = melted_cor, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+## Missing data analysis
+colSums(is.na(missingdata))
+
+missing_percentages <- colSums(is.na(missingdata)) / nrow(missingdata) * 100
+missing_percentages
+
+complete_cases <- sum(complete.cases(missingdata))
+complete_cases
+
+
+totalcells <- prod(dim(missingdata))
+missingcells <- sum(is.na(missingdata))
+percentage <- (missingcells * 100)/(totalcells)
+percentage
+
+
+## Impute data function
+library(mice)
+imputed_data <- mice(missingdata, m=40, method = "norm", seed = 123)
+summary(imputed_data)
+
+options(scipen = 999)
+
+stacked_imputed_data <- complete(imputed_data, "long", include = T)
+COMPLETEDDATA <- complete(imputed_data, 4)
+```
+
+## Attaching Country names to full imputed data
+```{r}
+COMPLETEDDATA$Group <- as.character(COMPLETEDDATA$Group)
+
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 1] <- "China"
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 2] <- "Hong Kong"
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 3] <- "Malaysia"
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 4] <- "Singapore"
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 5] <- "Taiwan"
+COMPLETEDDATA$Group[COMPLETEDDATA$Group == 6] <- "USA"
+
+COMPLETEDDATA$Group <- as.factor(COMPLETEDDATA$Group)
+```
+
+## Collapsing Covid  CT items to create General COVID CT item
+## Renaming other COVID/VACCINE ITEMS
+```{r}
+COMPLETEDDATA$CT_COVID <- rowMeans(COMPLETEDDATA[ , 66:70], na.rm = T)
+COMPLETEDDATA$CT_COVID <- format(round(COMPLETEDDATA$CT_COVID,
+                                                     0), nsmall = 0)
+COMPLETEDDATA$CT_COVID <- as.numeric(COMPLETEDDATA$CT_COVID)
+
+
+## RENAMING COLUMNS RELATING TO VACCINATION ADHERENCE/HESITANCY 
+colnames(COMPLETEDDATA)[71] = "COV_Vaccine_Adherence"
+COMPLETEDDATA$COV_Vaccine_Adherence <- as.numeric(COMPLETEDDATA$COV_Vaccine_Adherence)
+COMPLETEDDATA$COV_Vaccine_Adherence <- format(round(COMPLETEDDATA$COV_Vaccine_Adherence,
+                                                    0), nsmall = 0)
+
+```
+
+## Calculating Cronbachs alpha for scales of interest
+```{r}
+library(ltm)
+## System Justification (.86)
+cronbachalphaSJ <- subset(COMPLETEDDATA,
+                          select = c(SJ1, SJ2, SJ3, SJ4))
+
+cronbach.alpha(cronbachalphaSJ, na.rm = T)
+
+## COVID Conspiracy Beliefs (.77)
+cronbachalpha_COVCT <- subset(COMPLETEDDATA,
+                              select = c(Cov1W2, Cov2W2, Cov3W2, Cov4W2, Cov5W2))
+
+cronbach.alpha(cronbachalpha_COVCT, na.rm = T)
+
+## National Identification (.90)
+cronbachalphaNATID <- subset(COMPLETEDDATA,
+                             select = c(IWAH1_2, IWAH2_2, IWAH3_2, IWAH4_2, IWAH5_2,
+                                        IWAH6_2, IWAH7_2, IWAH8_2))
+cronbach.alpha(cronbachalphaNATID, na.rm = T)
+
+## COVID-19 threat (.77)
+cronbachalphaTHREAT <- subset(COMPLETEDDATA,
+                              select = c(Cov11W2, Cov12W2))
+cronbach.alpha(cronbachalphaTHREAT, na.rm = T)
+```
+
+## Vaccine adherence model replication
+```{r}
+library(jtools)
+
+vac_adhere_data <- COMPLETEDDATA 
+vac_adhere_data$COV_Vaccine_Adherence <- as.numeric(vac_adhere_data$COV_Vaccine_Adherence)
+
+vac_adhere_data <- vac_adhere_data %>%
+  mutate(COV_Vaccine_Adherence_rescaled = 
+                 ((COV_Vaccine_Adherence - min(COV_Vaccine_Adherence)) / 
+                          (max(COV_Vaccine_Adherence) - min(COV_Vaccine_Adherence))) * 6 + 1)
+
+## Centering predictor variables of interest for within/between group differences
+vac_adhere_data$GCProfileW1 <- scale(vac_adhere_data$GCProfileW1, center = T, scale = T)
+vac_adhere_data$NATIONAL_IDENTIFICATION <- scale(vac_adhere_data$NATIONAL_IDENTIFICATION,
+                                                 center = T, scale = T)
+vac_adhere_data$Liberalism <- scale(vac_adhere_data$Liberalism, center = T, scale = T)
+vac_adhere_data$COVID_threat <- scale(vac_adhere_data$COVID_threat, center = T, scale = T)
+vac_adhere_data$AgeGroup <- scale(vac_adhere_data$AgeGroup, center = T, scale = T)
+vac_adhere_data$Gender <- scale(vac_adhere_data$Gender, center = T, scale = T)
+
+
+vac_adhere_data <- vac_adhere_data %>%
+  mutate(Liberalism = ifelse(Liberalism > 0, "left-leaning", "right-leaning")) %>%
+  mutate(Liberalism = factor(Liberalism, levels = c("right-leaning", "left-leaning")))
+
+## Vaccine hesitancy/adherence model multilevel multiple regression
+## Null model ICC - .02
+VACADHERE_NULLMOD <- lmer(COV_Vaccine_Adherence_rescaled ~ 1 + (1|Group),
+                          data = vac_adhere_data, REML = F, 
+                          control = lmerControl(optimizer = "bobyqa"))
+tab_model(VACADHERE_NULLMOD)
+estimates(VACADHERE_NULLMOD)
+
+## FIXED EFFECTS model with random intercept and slope only
+VACADHERE_FIXED <- lmer(COV_Vaccine_Adherence_rescaled ~ 1 + GCProfileW1 + NATIONAL_IDENTIFICATION +
+                              COVID_threat + Liberalism + AgeGroup + Gender + (1|Group),
+                       data = vac_adhere_data, REML = F, control = lmerControl(
+                               optimizer = "bobyqa"
+                       ))
+summary(VACADHERE_FIXED)
+tab_model(VACADHERE_FIXED)
+
+## Introducing random effects of Global consciousness profile
+
+VACADHERE_RANDOM <- lmer(COV_Vaccine_Adherence_rescaled ~ 1 + GCProfileW1*Liberalism + NATIONAL_IDENTIFICATION +
+                                 COVID_threat + Liberalism + AgeGroup + Gender +
+                                 (1 + GCProfileW1|Group),
+                       data = vac_adhere_data, REML = F, control = lmerControl(
+                               optimizer = "bobyqa"
+                       ))
+
+summary(VACADHERE_RANDOM)
+tab_model(VACADHERE_RANDOM)
+
+library(reghelper) ## simple slopes 
+
+SS <- simple_slopes(VACADHERE_RANDOM, confint = T,
+                    ci.width = 0.95,
+                    confint.method = c("Wald", "profile", "boot"))
+SS
+
+## visualizing interaction
+library(jtools)
+
+Vac_adhere_plot <- plot_model(VACADHERE_RANDOM, type = "int") +
+        theme_apa() +
+        labs(x = "Global Consciousness",
+             y = "COVID-19 Vaccine Adherence",
+             title = NULL) 
+
+## Visualizing cross-cultural figure
+adhere_plot <- visualize(VACADHERE_RANDOM,
+  plot = "model",
+  formula = COV_Vaccine_Adherence_rescaled ~ GCProfileW1 + Group,
+  sample = 6, raw.data = TRUE
+) +
+  labs(
+    x = "Global Consciousness",
+    y = "Vaccine Adherence"
+  ) + theme_apa()
+
+hes_plot <- visualize(VACADHERE_RANDOM,
+  plot = "model",
+  formula = COV_Vaccine_Adherence_rescaled ~ NATIONAL_IDENTIFICATION + Group,
+  sample = 6, raw.data = TRUE
+) +
+  labs(
+    x = "National Identification",
+    y = "Vaccine Adherence"
+  ) + theme_apa()
+
+# Combine the plots using facet_grid
+library(gridExtra)
+
+combined_plot <- adhere_plot + hes_plot +
+  facet_grid(rows = vars(Group))
+
+combined_plot
+
+# Combine the plots using grid.arrange from the gridExtra package
+combined_plot <- grid.arrange(
+  adhere_plot + theme(legend.position = "bottom"),  # Move legend to the bottom
+  hes_plot + theme(legend.position = "bottom"),     # Move legend to the bottom
+  ncol = 1,  # Combine plots in a single column
+  heights = c(10, 10)  # Adjust the heights of the plots (in relative units)
+)
+
+# Increase the size of the combined plot
+ggsave("combined_plot.png", combined_plot, width = 10, height = 12)  # Adjust width and height as needed
+
+# Display the combined plot
+combined_plot
+## Saving tables and figures
+
+tab_model(VACADHERE_NULLMOD,VACADHERE_FIXED, VACADHERE_RANDOM, 
+          p.style = "numeric_stars", file = "Vaccine_adherence.doc")
+
+ggsave("Vac_adhere_plot.png", plot = Vac_adhere_plot)
+
+ggsave("combined_plot.png", plot = combined_plot)
+```
+
+## Null model for ICC mediation
+```{r}
+CT_NULLMODEL <- lmer(CT_COVID ~ 1 + (1 | Group),
+                             data = COMPLETEDDATA, REML = F, 
+                     control = lmerControl(optimizer = "bobyqa"))
+
+tab_model(CT_NULLMODEL) ## 16% of variance in SJ explained by country differences
+summary(CT_NULLMODEL)
+estimates(CT_NULLMODEL) ## Design effect
+```
+
+## Mediational model
+```{r}
+## National identity --> System Justification --> COVID Related Conspiracy Theory
+## Dropping NAs
+Med_CT_Data <- COMPLETEDDATA %>%
+        drop_na(SJ_W1, NATIONAL_IDENTIFICATION, CT_COVID)
+
+Med_CT_Data <- Med_CT_Data %>%
+  mutate(CT_COVID_rescaled = ((CT_COVID - min(CT_COVID)) / (max(CT_COVID) - min(CT_COVID))) * 6 + 1)
+
+## Centering of IV, Mediator, and control variables
+
+Med_CT_Data$NATIONAL_IDENTIFICATION <- scale(Med_CT_Data$NATIONAL_IDENTIFICATION, center = T, scale = T)
+Med_CT_Data$SJ_W1 <- scale(Med_CT_Data$SJ_W1, center = T, scale = T)
+Med_CT_Data$AgeGroup <- scale(Med_CT_Data$AgeGroup, center = T, scale = T)
+Med_CT_Data$Gender <- scale(Med_CT_Data$Gender, center = T, scale = T)
+
+
+library(mediation)
+
+## A path
+A_path <- lmer(SJ_W1 ~ NATIONAL_IDENTIFICATION + AgeGroup + Gender + 
+                       (1 + NATIONAL_IDENTIFICATION | Group),
+               data = Med_CT_Data, REML = F, control = lmerControl(optimizer = "bobyqa"))
+
+summary(A_path)
+tab_model(A_path)
+
+## B path
+B_path <- lmer(CT_COVID_rescaled ~ 1 + SJ_W1 + AgeGroup + Gender + 
+                       (1 | Group), data = Med_CT_Data,
+               REML = F, control = lmerControl(optimizer = "bobyqa"))
+
+summary(B_path)
+tab_model(B_path)
+
+## C path
+C_path <- lmer(CT_COVID_rescaled ~ 1 + NATIONAL_IDENTIFICATION + AgeGroup + Gender + (1 + NATIONAL_IDENTIFICATION | Group),
+               data = Med_CT_Data, REML = F, control = lmerControl(optimizer = "bobyqa"))
+
+summary(C_path)
+tab_model(C_path)
+
+## Full model
+full_model <- lmer(CT_COVID_rescaled ~ 1 + SJ_W1 + NATIONAL_IDENTIFICATION + AgeGroup + Gender +
+                           (1 + NATIONAL_IDENTIFICATION | Group), 
+                   data = Med_CT_Data, REML = F, control = lmerControl(optimizer = "bobyqa"))
+
+summary(full_model)
+tab_model(full_model)
+
+## Mediation analysis using mediation package - introduce a path and full model
+## Quasi-Bayesian Confidence Intervals
+## X --> M (A path - B = .28, 95% CI = .21 - .35, p < .001)
+## M --> Y (B path - B = .44, 95% CI = .42 - .46, p < .001)
+## X --> Y (C path - B = .06, 95% CI = .02 -.10, p < .001)
+## X --> M --> Y (C' path - B = -.07, 95% CI = -.08 - -.05, p < .001)
+## Average Causal Mediation Effect (ACME) B = .13, 95% CI = .10 - .16, p < .001
+## Average Direct Effect (ADE) B = -.06, 95% CI = -.08 - -.05, p < .001
+## Total Effect B = .06, 95% CI = .02 - .10, p < .001
+
+Mediation_results <- mediation::mediate(A_path, full_model,
+                       treat = "NATIONAL_IDENTIFICATION", mediator = "SJ_W1", 
+                       sims = 1000, dropobs = TRUE)
+
+summary(Mediation_results)
+
+mediate_plot(CT_COVID_rescaled ~ SJ_W1 + NATIONAL_IDENTIFICATION, 
+              data = Med_CT_Data) 
 ```
